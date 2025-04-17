@@ -32,23 +32,23 @@ model Session {
 }
 
 model Bundle {
-  id        String   @id @default(uuid())
+  id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  shop      String
-  status    String   @default("draft") // draft, published, archived
-  name      String
-  settings  Json
+  shop      String?
+  status    String?   @default("draft") // draft, published, archived
+  name      String?
+  settings  Json?
   products  BundleProduct[]
 }
 
 model BundleProduct {
-  id        String   @id @default(uuid())
-  bundleId  String
+  id        Int      @id @default(autoincrement())
+  bundleId  String?
   bundle    Bundle   @relation(fields: [bundleId], references: [id], onDelete: Cascade)
   productId String?
   name      String?
-  quantity  Int      @default(1)
+  quantity  Int?      @default(1)
   image     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

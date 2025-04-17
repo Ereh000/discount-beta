@@ -217,7 +217,7 @@ export default function EditProductBundle() {
     return (
         <Page title={bundleName} backAction={() => { }}>
             {showBanner && fetcher.data && (
-                <div className="">
+                <div className="">  
                     <Banner
                         title={fetcher.data?.message || fetcher.data?.error}
                         onDismiss={() => setShowBanner(false)}
