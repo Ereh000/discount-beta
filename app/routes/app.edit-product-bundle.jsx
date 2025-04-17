@@ -23,13 +23,11 @@ import {
 } from '@shopify/polaris-icons';
 import './_index/styles.module.css'
 import prisma from "../db.server";
-import { json, useActionData, useFetcher } from '@remix-run/react';
+import { json, useFetcher } from '@remix-run/react';
+import { url } from 'inspector';
 
 
 export default function EditProductBundle() {
-    // const {message} = useActionData();
-    // const actionData = useActionData();
-    // console.log("data", actionData)
     // Lift state up from BundleSettingsCard
     const [bundleName, setBundleName] = useState('Bundle 1');
     const [headerText, setHeaderText] = useState('Frequently bought together');
@@ -207,17 +205,17 @@ export default function EditProductBundle() {
     useEffect(() => {
         if (fetcher.data) {
             setShowBanner(true);
-            const timer = setTimeout(() => {
-                setShowBanner(false);
-            }, 10000);
-            return () => clearTimeout(timer);
+            // const timer = setTimeout(() => {
+            //     setShowBanner(false);
+            // }, 10000);
+            // return () => clearTimeout(timer);
         }
     }, [fetcher.data]);
 
     return (
-        <Page title={bundleName} backAction={() => { }}>
+        <Page title={bundleName}>
             {showBanner && fetcher.data && (
-                <div className="">  
+                <div className="">
                     <Banner
                         title={fetcher.data?.message || fetcher.data?.error}
                         onDismiss={() => setShowBanner(false)}
@@ -324,12 +322,16 @@ export default function EditProductBundle() {
                     <br />
                     <InlineStack align="end">
                         <ButtonGroup>
-                            <Button onClick={() => handleSave('draft')}>Save as draft</Button>
+                            <Button onClick={() => handleSave('draft')}
+                                loading={fetcher.state === 'submitting'}
+                            >
+                                Save as draft
+                            </Button>
                             <Button variant="primary" tone="critical">Delete</Button>
                             <Button
                                 variant="primary"
                                 onClick={() => handleSave('published')}
-                                loading={fetcher.state === 'submitting'}
+                                loading={ fetcher.state === 'submitting'}
                             >
                                 Publish
                             </Button>
@@ -344,6 +346,8 @@ export default function EditProductBundle() {
                     </InlineStack>
                 </Grid.Cell>
             </Grid>
+            <br />
+            <br />
         </Page>
     )
 }
@@ -2031,7 +2035,7 @@ export async function action({ request }) {
         if (bundleData.products && bundleData.products.length > 0) {
             await prisma.bundleProduct.createMany({
                 data: bundleData.products.map(product => ({
-                    bundleId: savedBundle.id,
+                    bundleId: parseInt(savedBundle.id),
                     productId: product.productId || "",
                     name: product.name || "",
                     quantity: product.quantity || 1,

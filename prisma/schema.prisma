@@ -44,7 +44,7 @@ model Bundle {
 
 model BundleProduct {
   id        Int      @id @default(autoincrement())
-  bundleId  String?
+  bundleId  Int      // Changed from String? to Int to match Bundle.id type
   bundle    Bundle   @relation(fields: [bundleId], references: [id], onDelete: Cascade)
   productId String?
   name      String?

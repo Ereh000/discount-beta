@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "df0f66ef860c7af85d93259ee8bfd2e5"
-application_url = "https://describe-interstate-feb-sl.trycloudflare.com"
+application_url = "https://tail-second-lay-anonymous.trycloudflare.com"
 embedded = true
 name = "discount-beta"
 handle = "discount-beta"
@@ -27,9 +27,9 @@ scopes = "write_products"
 
 [auth]
 redirect_urls = [
-  "https://describe-interstate-feb-sl.trycloudflare.com/auth/callback",
-  "https://describe-interstate-feb-sl.trycloudflare.com/auth/shopify/callback",
-  "https://describe-interstate-feb-sl.trycloudflare.com/api/auth/callback"
+  "https://tail-second-lay-anonymous.trycloudflare.com/auth/callback",
+  "https://tail-second-lay-anonymous.trycloudflare.com/auth/shopify/callback",
+  "https://tail-second-lay-anonymous.trycloudflare.com/api/auth/callback"
 ]
 
 [pos]
