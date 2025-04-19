@@ -50,7 +50,7 @@ export default function Dashboard() {
   const [activePopoverId, setActivePopoverId] = useState(null);
 
   const handleOpenModal = useCallback(() => setIsModalOpen(true), []);
-  const handleCloseModal = useCallback(() => setIsModalOpen(false), []);
+  const handleCloseModal = useCallback(() => setIsModalOpen(false), []); 
 
   // Toggle popover for bundle actions
   const togglePopover = useCallback((id) => {

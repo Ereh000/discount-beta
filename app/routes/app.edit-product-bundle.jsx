@@ -3,7 +3,6 @@
 import {
     Card,
     Grid,
-    Layout,
     Page,
     Tabs,
     TextField,
@@ -14,7 +13,6 @@ import {
     InlineStack,
     ButtonGroup,
     Button,
-    Image,
     Banner
 } from '@shopify/polaris'
 import React, { useState, useCallback, useEffect } from 'react'
@@ -24,7 +22,6 @@ import {
 import './_index/styles.module.css'
 import prisma from "../db.server";
 import { json, useFetcher } from '@remix-run/react';
-import { url } from 'inspector';
 
 
 export default function EditProductBundle() {
@@ -53,10 +50,11 @@ export default function EditProductBundle() {
     const [timerFormat, setTimerFormat] = useState('dd:hh:mm:ss');
     // Products in bundle
     const [products, setProducts] = useState([
-        { id: 1, name: '', quantity: 1, productId: null, image: null },
-        { id: 2, name: '', quantity: 1, productId: null, image: null },
-        { id: 3, name: '', quantity: 1, productId: null, image: null }
+        { id: 1, name: '', quantity: 1, productId: null, image: null, productHandle: null },
+        { id: 2, name: '', quantity: 1, productId: null, image: null, productHandle: null },
+        { id: 3, name: '', quantity: 1, productId: null, image: null, productHandle: null }
     ]);
+    console.log("products", products)
     // First, add these new state variables at the top of your EditProductBundle component
     const [typography, setTypography] = useState({
         header: { size: '16', weight: 'Lighter' },
@@ -117,7 +115,14 @@ export default function EditProductBundle() {
     const handleAddProduct = useCallback(() => {
         setProducts(prev => [
             ...prev,
-            { id: prev.length > 0 ? Math.max(...prev.map(p => p.id)) + 1 : 1, name: '', quantity: 1 }
+            {
+                id: prev.length > 0 ? Math.max(...prev.map(p => p.id)) + 1 : 1, 
+                name: '',
+                quantity: 1,
+                productId: null,
+                image: null,
+                handle: null
+            }
         ]);
     }, []);
 
@@ -213,7 +218,7 @@ export default function EditProductBundle() {
     }, [fetcher.data]);
 
     return (
-        <Page title={bundleName}>
+        <Page title={bundleName} backAction={{ url: '/app' }}>
             {showBanner && fetcher.data && (
                 <div className="">
                     <Banner
@@ -331,7 +336,7 @@ export default function EditProductBundle() {
                             <Button
                                 variant="primary"
                                 onClick={() => handleSave('published')}
-                                loading={ fetcher.state === 'submitting'}
+                                loading={fetcher.state === 'submitting'}
                             >
                                 Publish
                             </Button>
@@ -1012,7 +1017,8 @@ function BundleSettingsCard({
                                                                 ...updatedProducts[index],
                                                                 name: selectedProduct.title,
                                                                 productId: selectedProduct.id,
-                                                                image: selectedProduct.images[0]?.originalSrc
+                                                                image: selectedProduct.images[0]?.originalSrc,
+                                                                productHandle: selectedProduct.handle
                                                             };
                                                             setProducts(updatedProducts);
                                                         }
@@ -2037,6 +2043,7 @@ export async function action({ request }) {
                 data: bundleData.products.map(product => ({
                     bundleId: parseInt(savedBundle.id),
                     productId: product.productId || "",
+                    productHandle: product.productHandle || "",
                     name: product.name || "",
                     quantity: product.quantity || 1,
                     image: product.image || ""

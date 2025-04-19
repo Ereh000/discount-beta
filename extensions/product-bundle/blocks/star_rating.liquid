@@ -1,0 +1,220 @@
+<div class="product-bundle-container">
+  <h2 class="bundle-heading">{{ block.settings.heading }}</h2>
+
+  <div class="bundle-products">
+    {% for product in block.settings.products %}
+      <div class="bundle-product">
+        <div class="product-image">
+          <img
+            src="{{ product.featured_image | img_url: '100x100', crop: 'center' }}"
+            alt="{{ product.title }}"
+            width=""
+            height=""
+          >
+        </div>
+        <div class="product-details">
+          <h3 class="product-title">{{ product.title }}</h3>
+          <div class="product-price">
+            <span class="current-price">{{ product.price | money }}</span>
+            {% if product.compare_at_price > product.price %}
+              <span class="compare-price">{{ product.compare_at_price | money }}</span>
+            {% endif %}
+          </div>
+          <div class="product-options">
+            <div class="quantity-selector">
+              <label for="quantity-{{ product.id }}">x1</label>
+            </div>
+            <div class="variant-selectors">
+              {% if product.has_only_default_variant == false %}
+                {% for option in product.options_with_values %}
+                  <div class="option-selector">
+                    {% comment %} <label for="option-{{ product.id }}-{{ option.name }}">{{ option.name }}</label> {% endcomment %}
+                    <select id="option-{{ product.id }}-{{ option.name }}" class="option-select">
+                      {% for value in option.values %}
+                        <option value="{{ value }}">{{ value }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                {% endfor %}
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+      {% unless forloop.last %}
+        <div class="bundle-plus-icon">+</div>
+      {% endunless %}
+    {% endfor %}
+  </div>
+
+  <div class="bundle-summary">
+    <div class="bundle-total">
+      <span>Total:</span>
+      <div class="bundle-prices">
+        <span class="bundle-current-price">{{ block.settings.bundle_price | money }}</span>
+        {% if block.settings.bundle_compare_price %}
+          <span class="bundle-compare-price">{{ block.settings.bundle_compare_price | money }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="bundle-discount-badge">
+      <span>{{ block.settings.discount_text }}</span>
+    </div>
+
+    <button class="bundle-add-to-cart">{{ block.settings.button_text }}</button>
+  </div>
+</div>
+
+<style>
+  .product-bundle-container {
+    padding: 20px;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  .bundle-heading {
+    margin-bottom: 20px;
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  .bundle-products {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .bundle-product {
+    display: flex;
+    padding: 15px;
+    background-color: #f9f9fb;
+    border-radius: 8px;
+  }
+
+  .product-image {
+    margin-right: 15px;
+  }
+
+  .product-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 5px;
+  }
+
+  .current-price {
+    font-weight: 600;
+    color: #000;
+  }
+
+  .compare-price {
+    text-decoration: line-through;
+    color: #999;
+    margin-left: 5px;
+  }
+
+  .product-options {
+    margin-top: 10px;
+  }
+
+  .variant-selectors {
+    display: flex;
+    gap: 10px;
+    margin-top: 5px;
+  }
+
+  .option-select {
+    padding: 5px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+  }
+
+  .bundle-plus-icon {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
+    font-weight: bold;
+  }
+
+  .bundle-summary {
+    margin-top: 20px;
+  }
+
+  .bundle-total {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+    font-weight: 600;
+  }
+
+  .bundle-discount-badge {
+    background-color: #6b46c1;
+    color: white;
+    padding: 8px 15px;
+    border-radius: 4px;
+    text-align: center;
+    margin-bottom: 15px;
+  }
+
+  .bundle-add-to-cart {
+    width: 100%;
+    padding: 12px;
+    background-color: #6b46c1;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .bundle-compare-price {
+    text-decoration: line-through;
+    color: #999;
+    margin-left: 5px;
+  }
+</style>
+
+{% schema %}
+{
+  "name": "Product Bundle Test",
+  "target": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Frequently bought together"
+    },
+    {
+      "type": "product_list",
+      "id": "products",
+      "label": "Products",
+      "limit": 5
+    },
+    {
+      "type": "text",
+      "id": "bundle_price",
+      "label": "Bundle Price",
+      "info": "Enter the discounted price for the bundle"
+    },
+    {
+      "type": "text",
+      "id": "bundle_compare_price",
+      "label": "Bundle Compare Price",
+      "info": "Enter the original total price for comparison"
+    },
+    {
+      "type": "text",
+      "id": "discount_text",
+      "label": "Discount Text",
+      "default": "Unlock Your Discount"
+    },
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "Button Text",
+      "default": "Claim Offer"
+    }
+  ]
+}
+{% endschema %}

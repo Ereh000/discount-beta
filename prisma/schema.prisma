@@ -47,6 +47,7 @@ model BundleProduct {
   bundleId  Int      // Changed from String? to Int to match Bundle.id type
   bundle    Bundle   @relation(fields: [bundleId], references: [id], onDelete: Cascade)
   productId String?
+  productHandle      String?
   name      String?
   quantity  Int?      @default(1)
   image     String?
