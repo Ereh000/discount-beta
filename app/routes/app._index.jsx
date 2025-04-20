@@ -13,11 +13,9 @@ import {
   Grid,
   InlineStack,
   Modal,
-  Box,
   Badge,
   Popover,
   ActionList,
-  Icon,
 } from '@shopify/polaris';
 import {
   MenuHorizontalIcon,
@@ -25,7 +23,7 @@ import {
   DuplicateIcon,
   DeleteIcon
 } from '@shopify/polaris-icons';
-import { json, useLoaderData } from '@remix-run/react';
+import { json, useLoaderData, useFetcher } from '@remix-run/react';
 import prisma from "../db.server";
 
 // Add loader function to fetch bundles
@@ -44,10 +42,47 @@ export async function loader() {
   }
 }
 
+// Add action function to handle status toggle
+export async function action({ request }) {
+  const formData = await request.formData();
+  const bundleId = formData.get('bundleId');
+  const newStatus = formData.get('newStatus');
+
+  try {
+    // If setting to published, first set all bundles to draft
+    if (newStatus === 'published') {
+      await prisma.bundle.updateMany({
+        where: {
+          status: 'published'
+        },
+        data: {
+          status: 'draft'
+        }
+      });  
+    }
+
+    // Then update the selected bundle
+    const updatedBundle = await prisma.bundle.update({
+      where: {
+        id: parseInt(bundleId)
+      },
+      data: {
+        status: newStatus
+      }
+    });
+
+    return json({ success: true, bundle: updatedBundle });
+  } catch (error) {
+    console.error("Error updating bundle status:", error);
+    return json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
 export default function Dashboard() {
   const { bundles } = useLoaderData();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activePopoverId, setActivePopoverId] = useState(null);
+  const fetcher = useFetcher();
 
   const handleOpenModal = useCallback(() => setIsModalOpen(true), []);
   const handleCloseModal = useCallback(() => setIsModalOpen(false), []); 
@@ -59,9 +94,17 @@ export default function Dashboard() {
 
   // Handle bundle status toggle
   const handleStatusToggle = useCallback((bundleId, currentStatus) => {
-    // Implement status update logic here
-    console.log(`Toggling bundle ${bundleId} status to ${currentStatus === 'published' ? 'draft' : 'published'}`);
-  }, []);
+    const newStatus = currentStatus === 'published' ? 'draft' : 'published';
+    
+    // Use fetcher to submit the form data
+    fetcher.submit(
+      { 
+        bundleId: bundleId.toString(), 
+        newStatus 
+      },
+      { method: 'post' }
+    );
+  }, [fetcher]);
 
   return (
     <Page title="Dashboard">
@@ -176,7 +219,7 @@ export default function Dashboard() {
                             transition: 'background-color 0.3s'
                           }}
                         />
-                        <label for="bundle-status" style={{
+                        <label htmlFor={`toggle-${bundle.id}`} style={{
                           position: 'absolute',
                           left: bundle.status === 'published' ? '23px' : '9px',
                           top: '23%',
@@ -187,7 +230,7 @@ export default function Dashboard() {
                           transition: 'left 0.3s'
                         }}></label>
                       </div>
-
+                      
                       {/* Bundle name */}
                       <Text variant="headingMd" as="h3">{bundle.name || 'Bundle'}</Text>
 
@@ -228,7 +271,7 @@ export default function Dashboard() {
                               {
                                 content: 'Edit',
                                 icon: EditIcon,
-                                url: `/app/edit-product-bundle?id=${bundle.id}`
+                                url: `/app/edit-product-bundle/${bundle.id}`
                               },
                               {
                                 content: 'Duplicate',
@@ -396,7 +439,7 @@ export default function Dashboard() {
               </Text>
 
               <div style={{ marginTop: 'auto', paddingTop: '20px' }}>
-                <Button fullWidth variant='primary' url='/app/edit-product-bundle'>Create the deal</Button>
+                <Button fullWidth variant='primary' url='/app/add-product-bundle'>Create the deal</Button>
               </div>
             </div>
 

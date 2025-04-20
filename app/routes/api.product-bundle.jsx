@@ -106,9 +106,10 @@ export const loader = async ({ request }) => {
                     };
                 });
 
-                console.log("enrichedProducts", enrichedProducts);
-                // console.log("bundle", bundle);
+                // console.log("enrichedProducts", enrichedProducts);
+                // console.log("bundle", bundle.settings);
                 // console.log("responseJson.data.nodes", responseJson);
+                console.log("Bundle fetched successfully!")
 
                 return json({
                     success: true,

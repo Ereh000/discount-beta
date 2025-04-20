@@ -21,69 +21,139 @@ import {
 } from '@shopify/polaris-icons';
 import './_index/styles.module.css'
 import prisma from "../db.server";
-import { json, useFetcher } from '@remix-run/react';
+import { json, useFetcher, useParams, useLoaderData } from '@remix-run/react';
+import { authenticate } from '../shopify.server'
 
+// Add this loader function before the component
+export async function loader({ request, params }) {
+    const { admin } = await authenticate.admin(request);
+    const bundleId = parseInt(params.id);
+    // console.log(bundleId, "bundleId")
+
+    try {
+        // Fetch the bundle data from Prisma
+        const bundle = await prisma.bundle.findUnique({
+            where: {
+                id: parseInt(bundleId)
+            },
+            include: {
+                products: true // Include related products
+            }
+        });
+
+        if (!bundle) {
+            return json({
+                error: "Bundle not found",
+                bundle: null
+            }, { status: 404 });
+        }
+
+        // Fetch shop data for validation
+        const response = await admin.graphql(`
+        query {
+          shop {
+            name
+            id
+          }
+        }
+      `);
+        const shopData = await response.json();
+        const shopId = shopData.data.shop.id;
+
+        return json({
+            bundle,
+            shopId
+        });
+    } catch (error) {
+        console.error("Error fetching bundle:", error);
+        return json({
+            error: "Failed to load bundle data",
+            bundle: null
+        }, { status: 500 });
+    }
+}
 
 export default function EditProductBundle() {
-    // Lift state up from BundleSettingsCard
-    const [bundleName, setBundleName] = useState('Bundle 1');
-    const [headerText, setHeaderText] = useState('Frequently bought together');
-    const [alignment, setAlignment] = useState('center');
-    const [footerText, setFooterText] = useState('Total :');
-    const [buttonText, setButtonText] = useState('Claim Offer');
-    const [position, setPosition] = useState('all');
-    const [publishOption, setPublishOption] = useState('immediately');
-    const [selectedTemplate, setSelectedTemplate] = useState('prestige');
-    const [selectedColor, setSelectedColor] = useState('purple');
+    const { bundle, shopId, error } = useLoaderData();
+    const params = useParams();
+
+    // Initialize state with bundle data if available
+    const [bundleName, setBundleName] = useState(bundle?.name || '');
+    const [headerText, setHeaderText] = useState(bundle?.settings?.header || 'Frequently bought together');
+    const [alignment, setAlignment] = useState(bundle?.settings?.alignment || 'center');
+    const [footerText, setFooterText] = useState(bundle?.settings?.footer || 'Total :');
+    const [buttonText, setButtonText] = useState(bundle?.settings?.button || 'Claim Offer');
+    const [position, setPosition] = useState(bundle?.settings?.position || 'all');
+    const [publishOption, setPublishOption] = useState(bundle?.settings?.publishOption || 'immediately');
+    const [selectedTemplate, setSelectedTemplate] = useState(bundle?.settings?.template || 'prestige');
+    const [selectedColor, setSelectedColor] = useState(bundle?.settings?.color || 'purple');
+
     // Pricing options
-    const [pricingOption, setPricingOption] = useState('default');
-    const [discountPercentage, setDiscountPercentage] = useState('10');
-    const [fixedDiscount, setFixedDiscount] = useState('25');
-    const [fixedPrice, setFixedPrice] = useState('99');
+    const [pricingOption, setPricingOption] = useState(bundle?.settings?.pricing?.option || 'default');
+    const [discountPercentage, setDiscountPercentage] = useState(bundle?.settings?.pricing?.discountPercentage || '10');
+    const [fixedDiscount, setFixedDiscount] = useState(bundle?.settings?.pricing?.fixedDiscount || '25');
+    const [fixedPrice, setFixedPrice] = useState(bundle?.settings?.pricing?.fixedPrice || '99');
+
     // Highlight options
-    const [highlightOption, setHighlightOption] = useState('text');
-    const [highlightTitle, setHighlightTitle] = useState('Unlock Your Discount');
-    const [highlightTimerTitle, setHighlightTimerTitle] = useState('Offer ends in');
-    const [isBlinking, setIsBlinking] = useState(false);
-    const [highlightStyle, setHighlightStyle] = useState('solid');
-    const [timerEndDate, setTimerEndDate] = useState('');
-    const [timerFormat, setTimerFormat] = useState('dd:hh:mm:ss');
+    const [highlightOption, setHighlightOption] = useState(bundle?.settings?.highlight?.option || 'text');
+    const [highlightTitle, setHighlightTitle] = useState(bundle?.settings?.highlight?.title || 'Unlock Your Discount');
+    const [highlightTimerTitle, setHighlightTimerTitle] = useState(bundle?.settings?.highlight?.timerTitle || 'Offer ends in');
+    const [isBlinking, setIsBlinking] = useState(bundle?.settings?.highlight?.isBlinking || false);
+    const [highlightStyle, setHighlightStyle] = useState(bundle?.settings?.highlight?.style || 'solid');
+    const [timerEndDate, setTimerEndDate] = useState(bundle?.settings?.highlight?.timerEndDate || '');
+    const [timerFormat, setTimerFormat] = useState(bundle?.settings?.highlight?.timerFormat || 'dd:hh:mm:ss');
+
     // Products in bundle
-    const [products, setProducts] = useState([
-        { id: 1, name: '', quantity: 1, productId: null, image: null, productHandle: null },
-        { id: 2, name: '', quantity: 1, productId: null, image: null, productHandle: null },
-        { id: 3, name: '', quantity: 1, productId: null, image: null, productHandle: null }
-    ]);
-    console.log("products", products)
-    // First, add these new state variables at the top of your EditProductBundle component
-    const [typography, setTypography] = useState({
+    const [products, setProducts] = useState(
+        bundle?.products?.length > 0
+            ? bundle.products.map((product, index) => ({
+                id: index + 1,
+                name: product.name,
+                quantity: product.quantity,
+                productId: product.productId,
+                image: product.image,
+                productHandle: product.productHandle
+            }))
+            : [
+                { id: 1, name: '', quantity: 1, productId: null, image: null, productHandle: null },
+                { id: 2, name: '', quantity: 1, productId: null, image: null, productHandle: null },
+                { id: 3, name: '', quantity: 1, productId: null, image: null, productHandle: null }
+            ]
+    );
+
+    // Typography settings
+    const [typography, setTypography] = useState(bundle?.settings?.typography || {
         header: { size: '16', weight: 'Lighter' },
         titlePrice: { size: '15', weight: 'Bold' },
         quantityPrice: { size: '13', fontStyle: 'Regular' },
         highlight: { size: '12', fontStyle: 'Regular' },
     });
-    const [spacing, setSpacing] = useState({
+
+    // Spacing settings
+    const [spacing, setSpacing] = useState(bundle?.settings?.spacing || {
         bundleTop: '18',
         bundleBottom: '6',
         footerTop: '15',
         footerBottom: '10'
     });
-    const [shapes, setShapes] = useState({
+
+    // Shape settings
+    const [shapes, setShapes] = useState(bundle?.settings?.shapes || {
         bundle: 'Rounded',
         footer: 'Rounded',
         addToCart: 'Rounded'
     });
-    const [productImageSize, setProductImageSize] = useState('55');
-    const [iconStyle, setIconStyle] = useState('Plus 5');
-    const [borderThickness, setBorderThickness] = useState({
+
+    const [productImageSize, setProductImageSize] = useState(bundle?.settings?.productImageSize || '55');
+    const [iconStyle, setIconStyle] = useState(bundle?.settings?.iconStyle || 'Plus 5');
+    const [borderThickness, setBorderThickness] = useState(bundle?.settings?.borderThickness || {
         bundle: '1',
         footer: '0',
         addToCart: '2'
     });
 
-    // First, add these new state variables at the top of your component
-    // color tab states
-    const [colors, setColors] = useState({
+    // Colors
+    const [colors, setColors] = useState(bundle?.settings?.colors || {
         background: '',
         border: '#E1E3E5',
         footerBackground: '#F6F6F7',
@@ -100,9 +170,9 @@ export default function EditProductBundle() {
         quantityText: '#000000',
         footerText: '#000000',
     });
-    // console.log("products", products)
 
-    const [settings, setSettings] = useState({
+    // Settings
+    const [settings, setSettings] = useState(bundle?.settings?.general || {
         variantChoice: true,
         showPrices: false,
         showComparePrice: true,
@@ -116,7 +186,7 @@ export default function EditProductBundle() {
         setProducts(prev => [
             ...prev,
             {
-                id: prev.length > 0 ? Math.max(...prev.map(p => p.id)) + 1 : 1, 
+                id: prev.length > 0 ? Math.max(...prev.map(p => p.id)) + 1 : 1,
                 name: '',
                 quantity: 1,
                 productId: null,
@@ -166,6 +236,19 @@ export default function EditProductBundle() {
     const fetcher = useFetcher();
     // console.log(fetcher.data?.bundleData, "success")
     const handleSave = async (status) => {
+        // Check if any products have been selected
+        const hasSelectedProducts = products.some(product => product.name && product.name.trim() !== '');
+
+        if (!hasSelectedProducts) {
+            // Show error message if no products are selected
+            setShowBanner(true);
+            fetcher.data = {
+                success: false,
+                error: "Please select at least one product for your bundle before saving."
+            };
+            return;
+        }
+
         const bundleData = {
             status, // 'draft' or 'published'
             bundleName,
@@ -341,13 +424,6 @@ export default function EditProductBundle() {
                                 Publish
                             </Button>
                         </ButtonGroup>
-                        <div className="response-status">
-                            {/* {fetcher.data && (
-                                <p style={{ color: fetcher.data?.success ? 'green' : 'red' }}>
-                                    {fetcher.data?.message || fetcher.data?.error}
-                                </p>
-                            )} */}
-                        </div>
                     </InlineStack>
                 </Grid.Cell>
             </Grid>
@@ -1991,14 +2067,81 @@ function BundleLivePreview({
 // }
 
 
-export async function action({ request }) {
+export async function action({ request, params }) {
     const formData = await request.formData();
     const bundleData = JSON.parse(formData.get("bundleData"));
+    const bundleId = params.id;
+
+    const { admin } = await authenticate.admin(request);
+
+    const response = await admin.graphql(`
+        query{
+            shop {
+                name
+                id
+            }
+        }
+    `);
+
+    const shopData = await response.json();
+    const shopId = shopData.data.shop.id;
 
     try {
-        const savedBundle = await prisma.bundle.create({
+        // Check if a bundle with the same name already exists (excluding the current bundle)
+        const existingBundle = await prisma.bundle.findFirst({
+            where: {
+                name: bundleData.bundleName,
+                shop: shopId,
+                id: {
+                    not: parseInt(bundleId) // Exclude the current bundle
+                }
+            }
+        });
+
+        if (existingBundle) {
+            return json({
+                success: false,
+                error: "A bundle with this name already exists. Please choose a different name."
+            });
+        }
+
+        // Check if any products have been selected
+        const hasSelectedProducts = bundleData.products.some(product => product.name && product.name.trim() !== '');
+
+        if (!hasSelectedProducts) {
+            return json({
+                success: false,
+                error: "Please select at least one product for your bundle before saving."
+            });
+        }
+
+        // Check if trying to publish and another bundle is already published
+        if (bundleData.status === 'published') {
+            const publishedBundle = await prisma.bundle.findFirst({
+                where: {
+                    status: 'published',
+                    shop: shopId,
+                    id: {
+                        not: parseInt(bundleId) // Exclude the current bundle
+                    }
+                }
+            });
+
+            if (publishedBundle) {
+                return json({
+                    success: false,
+                    error: "Another bundle is already published. Please set the other bundle to draft first or save this bundle as draft."
+                });
+            }
+        }
+
+
+        // Update the bundle
+        const updatedBundle = await prisma.bundle.update({
+            where: {
+                id: parseInt(bundleId)
+            },
             data: {
-                shop: "test-shop",
                 status: bundleData.status,
                 name: bundleData.bundleName,
                 settings: {
@@ -2037,11 +2180,17 @@ export async function action({ request }) {
             }
         });
 
-        // After creating the bundle, create the products
+        // Delete existing products and create new ones
+        await prisma.bundleProduct.deleteMany({
+            where: {
+                bundleId: parseInt(bundleId)
+            }
+        });
+
         if (bundleData.products && bundleData.products.length > 0) {
             await prisma.bundleProduct.createMany({
                 data: bundleData.products.map(product => ({
-                    bundleId: parseInt(savedBundle.id),
+                    bundleId: parseInt(bundleId),
                     productId: product.productId || "",
                     productHandle: product.productHandle || "",
                     name: product.name || "",
@@ -2051,10 +2200,13 @@ export async function action({ request }) {
             });
         }
 
-        console.log('Bundle saved to Prisma:');
-        return json({ success: true, message: "Settings saved successfully", bundleData });
+        return json({
+            success: true,
+            message: "Bundle updated successfully",
+            bundleData
+        });
     } catch (error) {
-        console.error('Error saving bundle:', error);
+        console.error('Error updating bundle:', error);
         return json({
             success: false,
             error: error.message

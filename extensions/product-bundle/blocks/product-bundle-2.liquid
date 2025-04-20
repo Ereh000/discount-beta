@@ -1,3 +1,5 @@
+{% comment %} Product Bundle 2 {% endcomment %}
+
 <div class="product-bundle-container" id="product-bundle-container">
   <h2 class="bundle-heading"></h2>
 
@@ -82,9 +84,12 @@
     fetch(`${shop}/apps/product/product-bundle`)
       .then((response) => response.json())
       .then((data) => {
-        if (data.bundles && data.bundles.length > 0) {
-          const bundle = data.bundles[0];
+        const publishedBundles = data.bundles.filter((bundle) => bundle.status === 'published');
+        if (publishedBundles && publishedBundles.length > 0) {
+          // Use the first published bundle
+          const bundle = publishedBundles[0];
           console.log('Bundle:', bundle);
+          console.log('Bundle Settings:', bundle.settings);
 
           // bundle Response --------
           //      {
@@ -233,15 +238,86 @@
     if (!settings) return;
 
     const container = document.querySelector('.product-bundle-container');
+    const bundleHeading = document.querySelector('.bundle-heading');
     const bundleTotal = document.querySelector('.bundle-total');
     const discountBadge = document.querySelector('.bundle-discount-badge');
     const addToCartButton = document.querySelector('.bundle-add-to-cart');
+    const bundleProducts = document.querySelector('.bundle-products');
+    // ... (other styling updates)
+    const bundleHeadingMain = document.querySelector('.bundle-heading');
+
+    // Store bundle data globally for later use
+    window.bundleData = { settings };
+
+    // Apply alignment
+    if (settings.alignment) {
+      bundleHeadingMain.style.textAlign = settings.alignment;
+    }
+
+    // Apply typography settings
+    if (settings.typography) {
+      // Header typography
+      if (settings.typography.header && bundleHeading) {
+        bundleHeading.style.fontSize = `${settings.typography.header.size}px`;
+        bundleHeading.style.fontWeight =
+          settings.typography.header.weight === 'Bold'
+            ? 'bold'
+            : settings.typography.header.weight === 'Lighter'
+            ? '300'
+            : 'normal';
+      }
+
+      // Title/Price typography
+      if (settings.typography.titlePrice) {
+        document.querySelectorAll('.product-title').forEach((el) => {
+          el.style.fontSize = `${settings.typography.titlePrice.size}px`;
+          el.style.fontWeight =
+            settings.typography.titlePrice.weight === 'Bold'
+              ? 'bold'
+              : settings.typography.titlePrice.weight === 'Lighter'
+              ? '300'
+              : 'normal';
+        });
+      }
+
+      // Quantity/Price typography
+      if (settings.typography.quantityPrice) {
+        document.querySelectorAll('.product-price, .quantity-selector').forEach((el) => {
+          el.style.fontSize = `${settings.typography.quantityPrice.size}px`;
+          el.style.fontWeight =
+            settings.typography.quantityPrice.fontStyle === 'Bold'
+              ? 'bold'
+              : settings.typography.quantityPrice.fontStyle === 'Lighter'
+              ? '300'
+              : 'normal';
+        });
+      }
+
+      // Highlight typography
+      if (settings.typography.highlight && discountBadge) {
+        discountBadge.style.fontSize = `${settings.typography.highlight.size}px`;
+        discountBadge.style.fontWeight =
+          settings.typography.highlight.fontStyle === 'Bold'
+            ? 'bold'
+            : settings.typography.highlight.fontStyle === 'Lighter'
+            ? '300'
+            : 'normal';
+      }
+    }
 
     // Apply colors
     if (settings.colors) {
-      // Container background
+      // Container background - change to apply to product cards instead
       if (settings.colors.background) {
-        container.style.backgroundColor = settings.colors.background;
+        // Apply background color to product cards instead of container
+        document.querySelectorAll('.bundle-product').forEach((card) => {
+          card.style.backgroundColor = settings.colors.background;
+        });
+      }
+
+      // Border color
+      if (settings.colors.border) {
+        container.style.borderColor = settings.colors.border;
       }
 
       // Footer background
@@ -254,26 +330,56 @@
         discountBadge.style.backgroundColor = settings.colors.highlightBackground;
       }
 
-      // Button background
-      if (settings.colors.buttonBackground) {
-        addToCartButton.style.backgroundColor = settings.colors.buttonBackground;
+      // Button background and border
+      if (addToCartButton) {
+        if (settings.colors.buttonBackground) {
+          addToCartButton.style.backgroundColor = settings.colors.buttonBackground;
+        }
+
+        if (settings.colors.buttonBorder) {
+          addToCartButton.style.borderColor = settings.colors.buttonBorder;
+        }
       }
 
       // Text colors
-      if (settings.colors.headerText) {
-        document.querySelector('.bundle-heading').style.color = settings.colors.headerText;
+      if (settings.colors.headerText && bundleHeading) {
+        bundleHeading.style.color = settings.colors.headerText;
       }
 
-      if (settings.colors.highlightText) {
+      if (settings.colors.titleText) {
+        document.querySelectorAll('.product-title').forEach((el) => {
+          el.style.color = settings.colors.titleText;
+        });
+      }
+
+      if (settings.colors.highlightText && discountBadge) {
         discountBadge.style.color = settings.colors.highlightText;
       }
 
-      if (settings.colors.addToCartText) {
+      if (settings.colors.addToCartText && addToCartButton) {
         addToCartButton.style.color = settings.colors.addToCartText;
       }
 
-      if (settings.colors.footerText) {
+      if (settings.colors.footerText && bundleTotal) {
         bundleTotal.style.color = settings.colors.footerText;
+      }
+
+      if (settings.colors.price) {
+        document.querySelectorAll('.current-price').forEach((el) => {
+          el.style.color = settings.colors.price;
+        });
+      }
+
+      if (settings.colors.comparedPrice) {
+        document.querySelectorAll('.compare-price').forEach((el) => {
+          el.style.color = settings.colors.comparedPrice;
+        });
+      }
+
+      if (settings.colors.quantityText) {
+        document.querySelectorAll('.quantity-selector').forEach((el) => {
+          el.style.color = settings.colors.quantityText;
+        });
       }
     }
 
@@ -287,39 +393,156 @@
         container.style.paddingBottom = `${settings.spacing.bundleBottom}px`;
       }
 
-      if (settings.spacing.footerTop) {
+      if (settings.spacing.footerTop && bundleTotal) {
         bundleTotal.style.marginTop = `${settings.spacing.footerTop}px`;
       }
 
-      if (settings.spacing.footerBottom) {
+      if (settings.spacing.footerBottom && bundleTotal) {
         bundleTotal.style.marginBottom = `${settings.spacing.footerBottom}px`;
+      }
+    }
+
+    // Apply border thickness
+    if (settings.borderThickness) {
+      if (settings.borderThickness.bundle) {
+        container.style.borderWidth = `${settings.borderThickness.bundle}px`;
+        container.style.borderStyle = settings.borderThickness.bundle === '0' ? 'none' : 'solid';
+      }
+
+      if (settings.borderThickness.footer && bundleTotal) {
+        bundleTotal.style.borderWidth = `${settings.borderThickness.footer}px`;
+        bundleTotal.style.borderStyle = settings.borderThickness.footer === '0' ? 'none' : 'solid';
+      }
+
+      if (settings.borderThickness.addToCart && addToCartButton) {
+        addToCartButton.style.borderWidth = `${settings.borderThickness.addToCart}px`;
+        addToCartButton.style.borderStyle = settings.borderThickness.addToCart === '0' ? 'none' : 'solid';
       }
     }
 
     // Apply border radius based on shapes
     if (settings.shapes) {
-      if (settings.shapes.bundle === 'Rounded') {
+      if (settings.shapes.bundle) {
+        const radius = settings.shapes.bundle === 'Rounded' ? '8px' : '0px';
+        container.style.borderRadius = radius;
         document.querySelectorAll('.bundle-product').forEach((el) => {
-          el.style.borderRadius = '8px';
-        });
-      } else if (settings.shapes.bundle === 'Square') {
-        document.querySelectorAll('.bundle-product').forEach((el) => {
-          el.style.borderRadius = '0px';
+          el.style.borderRadius = radius;
         });
       }
 
-      if (settings.shapes.footer === 'Rounded') {
-        bundleTotal.style.borderRadius = '8px';
-      } else if (settings.shapes.footer === 'Square') {
-        bundleTotal.style.borderRadius = '0px';
+      if (settings.shapes.footer && bundleTotal) {
+        bundleTotal.style.borderRadius = settings.shapes.footer === 'Rounded' ? '8px' : '0px';
       }
 
-      if (settings.shapes.addToCart === 'Rounded') {
-        addToCartButton.style.borderRadius = '8px';
-      } else if (settings.shapes.addToCart === 'Square') {
-        addToCartButton.style.borderRadius = '0px';
+      if (settings.shapes.addToCart && addToCartButton) {
+        addToCartButton.style.borderRadius = settings.shapes.addToCart === 'Rounded' ? '8px' : '0px';
       }
     }
+
+    // Apply product image size
+    if (settings.productImageSize) {
+      document.querySelectorAll('.product-image img').forEach((img) => {
+        img.style.width = `${settings.productImageSize}px`;
+        img.style.height = `${settings.productImageSize}px`;
+      });
+    }
+
+    // Apply icon style for the plus sign
+    if (settings.iconStyle && settings.iconStyle.includes('Plus')) {
+      document.querySelectorAll('.bundle-plus-icon').forEach((icon) => {
+        icon.style.fontWeight = settings.iconStyle.includes('5') ? 'bold' : 'normal';
+        icon.style.fontSize = settings.iconStyle.includes('5') ? '24px' : '18px';
+      });
+    }
+
+    // Apply highlight effects
+    if (settings.highlight && discountBadge) {
+      // Apply blinking effect if enabled
+      if (settings.highlight.isBlinking) {
+        discountBadge.classList.add('blinking');
+        // Add a CSS animation for blinking
+        const style = document.createElement('style');
+        style.textContent = `
+          .blinking {
+            animation: blink-animation 1s steps(5, start) infinite;
+          }
+          @keyframes blink-animation {
+            to {
+              visibility: hidden;
+            }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+
+      // Apply highlight style
+      if (settings.highlight.style) {
+        if (settings.highlight.style === 'solid') {
+          discountBadge.style.opacity = '1';
+        } else if (settings.highlight.style === 'transparent') {
+          discountBadge.style.opacity = '0.8';
+        }
+      }
+
+      // Setup timer if timer option is selected
+      if (settings.highlight.option === 'timer' && settings.highlight.timerEndDate) {
+        setupCountdownTimer(
+          settings.highlight.timerEndDate,
+          settings.highlight.timerFormat,
+          settings.highlight.timerTitle
+        );
+      }
+    }
+  }
+
+  // Function to setup countdown timer
+  function setupCountdownTimer(endDateStr, format, timerTitle) {
+    const discountBadge = document.querySelector('.bundle-discount-badge');
+    if (!discountBadge) return;
+
+    const endDate = new Date(endDateStr);
+
+    // Create timer elements
+    discountBadge.innerHTML = `
+      <div class="timer-container">
+        <span class="timer-title">${timerTitle || 'Offer ends in'}</span>
+        <span class="timer-countdown">Loading...</span>
+      </div>
+    `;
+
+    const countdownElement = discountBadge.querySelector('.timer-countdown');
+
+    // Update timer function
+    function updateTimer() {
+      const now = new Date();
+      const diff = endDate - now;
+
+      if (diff <= 0) {
+        countdownElement.textContent = 'Offer expired';
+        return;
+      }
+
+      // Calculate time components
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      // Format based on the specified format
+      let formattedTime = format || 'dd:hh:mm:ss';
+      formattedTime = formattedTime.replace('dd', days.toString().padStart(2, '0'));
+      formattedTime = formattedTime.replace('hh', hours.toString().padStart(2, '0'));
+      formattedTime = formattedTime.replace('mm', minutes.toString().padStart(2, '0'));
+      formattedTime = formattedTime.replace('ss', seconds.toString().padStart(2, '0'));
+
+      countdownElement.textContent = formattedTime;
+    }
+
+    // Initial update
+    updateTimer();
+
+    // Update every second
+    setInterval(updateTimer, 1000);
   }
 
   function fetchBundleProducts(bundleId, bundle) {
@@ -627,14 +850,87 @@
 
     // Initialize the bundle total pricing after rendering all products
     updateBundleTotalPricing();
+
+    // Apply styling to the dynamically created elements
+    if (window.bundleData && window.bundleData.settings) {
+      const settings = window.bundleData.settings;
+
+      // Apply background color to product cards if set in settings
+      if (settings.colors && settings.colors.background) {
+        document.querySelectorAll('.bundle-product').forEach((card) => {
+          card.style.backgroundColor = settings.colors.background;
+        });
+      }
+
+      // Apply border color to product cards if set in settings
+      if (settings.colors && settings.colors.border) {
+        document.querySelectorAll('.bundle-product').forEach((card) => {
+          card.style.border = `1px solid ${settings.colors.border}`;
+        });
+      }
+
+      // Apply typography settings to product titles
+      if (settings.typography && settings.typography.titlePrice) {
+        document.querySelectorAll('.product-title').forEach((el) => {
+          el.style.fontSize = `${settings.typography.titlePrice.size}px`;
+          el.style.fontWeight =
+            settings.typography.titlePrice.weight === 'Bold'
+              ? 'bold'
+              : settings.typography.titlePrice.weight === 'Lighter'
+              ? '300'
+              : 'normal';
+        });
+      }
+
+      // Apply typography settings to quantity/price elements
+      if (settings.typography && settings.typography.quantityPrice) {
+        document.querySelectorAll('.product-price, .quantity-selector').forEach((el) => {
+          el.style.fontSize = `${settings.typography.quantityPrice.size}px`;
+          el.style.fontWeight =
+            settings.typography.quantityPrice.fontStyle === 'Bold'
+              ? 'bold'
+              : settings.typography.quantityPrice.fontStyle === 'Lighter'
+              ? '300'
+              : 'normal';
+        });
+      }
+
+      // Apply text colors
+      if (settings.colors) {
+        if (settings.colors.titleText) {
+          document.querySelectorAll('.product-title').forEach((el) => {
+            el.style.color = settings.colors.titleText;
+          });
+        }
+
+        if (settings.colors.price) {
+          document.querySelectorAll('.current-price').forEach((el) => {
+            el.style.color = settings.colors.price;
+          });
+        }
+
+        if (settings.colors.comparedPrice) {
+          document.querySelectorAll('.compare-price').forEach((el) => {
+            el.style.color = settings.colors.comparedPrice;
+          });
+        }
+
+        if (settings.colors.quantityText) {
+          document.querySelectorAll('.quantity-selector').forEach((el) => {
+            el.style.color = settings.colors.quantityText;
+          });
+        }
+      }
+    }
   }
 
   function renderVariantOptions(product) {
-    if (!product.variants) return '';
+    if (!product.variants || !product.options) return '';
 
     let optionsHtml = '';
+    let hasVariants = false;
+
     product.options.forEach((option) => {
-      // Don't stringify the entire product object
       const uniqueValues = [
         ...new Set(
           product.variants.nodes
@@ -643,7 +939,8 @@
         ),
       ];
 
-      if (option.name != 'Title') {
+      if (option.name !== 'Title' && uniqueValues.length > 0) {
+        hasVariants = true;
         optionsHtml += `
             <div class="option-selector">
               <label for="option-${product.id}-${option.name}">${option.name}</label>
@@ -658,13 +955,14 @@
       }
     });
 
-    return optionsHtml;
+    return hasVariants ? optionsHtml : '';
   }
 
   // Remove the individual event listeners and use event delegation instead
   document.addEventListener('change', function (event) {
     if (event.target.classList.contains('option-select')) {
-      // console.log('event.target', event.target.classList.contains('option-select'));
+      // console.log('evernt.target', event.target);
+      // console.log('event.target', event.target.classLihp-option-select'));
       const productId = event.target.dataset.productId;
       const productElement = event.target.closest('.bundle-product');
 
@@ -899,10 +1197,10 @@
         // If we only have a product ID, we can't add it to cart
         console.warn('No variant selected for product, using default variant');
         if (productEl.querySelector('.product-options')) {
-          missingVariants = true;  
+          missingVariants = true;
           const productTitle = productEl.querySelector('.product-title').textContent;
           console.error(`Missing variant selection for product: ${productTitle}`);
-        } else {  
+        } else {
           variantId = variantId.split('/').pop();
         }
       }
