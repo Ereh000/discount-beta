@@ -3,7 +3,7 @@
 client_id = "df0f66ef860c7af85d93259ee8bfd2e5"
 name = "discount-beta"
 handle = "discount-beta"
-application_url = "https://endangered-pub-fix-hockey.trycloudflare.com"
+application_url = "https://colon-believe-budgets-syracuse.trycloudflare.com"
 embedded = true
 
 [build]
@@ -27,13 +27,13 @@ scopes = "write_products"
 
 [auth]
 redirect_urls = [
-  "https://endangered-pub-fix-hockey.trycloudflare.com/auth/callback",
-  "https://endangered-pub-fix-hockey.trycloudflare.com/auth/shopify/callback",
-  "https://endangered-pub-fix-hockey.trycloudflare.com/api/auth/callback"
+  "https://colon-believe-budgets-syracuse.trycloudflare.com/auth/callback",
+  "https://colon-believe-budgets-syracuse.trycloudflare.com/auth/shopify/callback",
+  "https://colon-believe-budgets-syracuse.trycloudflare.com/api/auth/callback"
 ]
 
 [app_proxy]
-url = "https://endangered-pub-fix-hockey.trycloudflare.com/api"
+url = "https://colon-believe-budgets-syracuse.trycloudflare.com/api"
 subpath = "product"
 prefix = "apps"
 
