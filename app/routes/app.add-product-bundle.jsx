@@ -1740,7 +1740,7 @@ function BundleLivePreview({
 
     return (
         <Card>
-            <div style={{ padding: '16px' }}>
+            <div>  
                 <Text variant="headingMd" as="h2">Live Preview</Text>
 
                 <div style={{

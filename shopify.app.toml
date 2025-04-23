@@ -3,7 +3,7 @@
 client_id = "df0f66ef860c7af85d93259ee8bfd2e5"
 name = "discount-beta"
 handle = "discount-beta"
-application_url = "https://colon-believe-budgets-syracuse.trycloudflare.com"
+application_url = "https://cope-fear-felt-costumes.trycloudflare.com"
 embedded = true
 
 [build]
@@ -27,13 +27,13 @@ scopes = "write_products"
 
 [auth]
 redirect_urls = [
-  "https://colon-believe-budgets-syracuse.trycloudflare.com/auth/callback",
-  "https://colon-believe-budgets-syracuse.trycloudflare.com/auth/shopify/callback",
-  "https://colon-believe-budgets-syracuse.trycloudflare.com/api/auth/callback"
+  "https://cope-fear-felt-costumes.trycloudflare.com/auth/callback",
+  "https://cope-fear-felt-costumes.trycloudflare.com/auth/shopify/callback",
+  "https://cope-fear-felt-costumes.trycloudflare.com/api/auth/callback"
 ]
 
 [app_proxy]
-url = "https://colon-believe-budgets-syracuse.trycloudflare.com/api"
+url = "https://cope-fear-felt-costumes.trycloudflare.com/api"
 subpath = "product"
 prefix = "apps"
 

@@ -19,27 +19,27 @@ export async function loader({ request }) {
     try {
         // Query Shopify GraphQL API to get product variant information
         const response = await admin.graphql(`
-      query GetProductVariants($id: ID!) {
-        product(id: $id) {
-          id
-          title
-          handle
-          variants(first: 100) {
-            nodes {
+          query GetProductVariants($id: ID!) {
+            product(id: $id) {
               id
               title
-              sku
-              price
-              compareAtPrice
-              selectedOptions {
-                name
-                value
+              handle
+              variants(first: 100) {
+                nodes {
+                  id
+                  title
+                  sku
+                  price
+                  compareAtPrice
+                  selectedOptions {
+                    name
+                    value
+                  }
+                }
               }
             }
           }
-        }
-      }
-    `, {
+        `, {
             variables: {
                 id: productId
             }
