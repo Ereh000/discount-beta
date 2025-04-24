@@ -12,7 +12,7 @@
     "allowJs": true,
     "resolveJsonModule": true,
     "jsx": "react-jsx",
-    "module": "ESNext",
+    "module": "ESNext",  
     "moduleResolution": "Bundler",
     "target": "ES2022",
     "baseUrl": ".",
