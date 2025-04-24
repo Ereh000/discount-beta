@@ -1,3 +1,11 @@
+.add_bundle_grid_wrapper .Polaris-Grid-Cell.Polaris-Grid-Cell--cell_6ColumnXs.Polaris-Grid-Cell--cell_3ColumnSm.Polaris-Grid-Cell--cell_3ColumnMd.Polaris-Grid-Cell--cell_6ColumnLg.Polaris-Grid-Cell--cell_6ColumnXl{
+  position: sticky !important;
+  top: 0 !important;
+  position: -webkit-sticky !important;
+  position: sticky !important;
+  height: fit-content !important;
+}
+
 .product-bundle-container {
   padding: 10px;
 }

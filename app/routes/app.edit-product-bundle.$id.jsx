@@ -23,6 +23,7 @@ import './_index/styles.module.css'
 import prisma from "../db.server";
 import { json, useFetcher, useParams, useLoaderData } from '@remix-run/react';
 import { authenticate } from '../shopify.server'
+import "./_index/style.css";
 
 // Add this loader function before the component
 export async function loader({ request, params }) {
@@ -1713,10 +1714,10 @@ function BundleLivePreview({
     alignment,
     footerText,
     buttonText,
+    selectedTemplate,
     selectedColor,
     settings,
-    products,  // Add products prop
-    // Add highlight props
+    products,
     highlightOption,
     highlightTitle,
     highlightTimerTitle,
@@ -1728,262 +1729,390 @@ function BundleLivePreview({
     spacing,
     shapes,
     productImageSize,
+    iconStyle,
     borderThickness,
     colors,
-}) {
+  }) {
+    // Helper function to get border radius based on shape type
+    const getBorderRadius = (shapeType) => {
+      switch (shapeType) {
+        case "Rounded":
+          return "10px";
+        case "Pill":
+          return "50px";
+        case "Squared":
+          return "0px";
+        default:
+          return "8px";
+      }
+    };
+  
     // Get the color for the preview based on the selected color
     const getColorValue = (color) => {
-        const colorMap = {
-            'black': '#000000',
-            'purple': '#6F42C1',
-            'blue': '#4285F4',
-            'teal': '#20B2AA',
-            'green': '#4CAF50',
-            'pink': '#FF69B4',
-            'red': '#FF0000',
-            'orange': '#FFA500',
-            'yellow': '#FFFF00',
-            'mint': '#98FB98'
-        };
-        return colorMap[color] || '#FF6B6B';
+      const colorMap = {
+        black: "#000000",
+        purple: "#6F42C1",
+        blue: "#4285F4",
+        teal: "#20B2AA",
+        green: "#4CAF50",
+        pink: "#FF69B4",
+        red: "#FF0000",
+        orange: "#FFA500",
+        yellow: "#FFFF00",
+        mint: "#98FB98",
+      };
+      return colorMap[color] || "#FF6B6B";
     };
-
+  
     const themeColor = getColorValue(selectedColor);
-
-    // Add timer state and effect
-    const [timeLeft, setTimeLeft] = useState('');
-    useEffect(() => {
-        if (highlightOption === 'timer' && timerEndDate) {
-            const timer = setInterval(() => {
-                const end = new Date(timerEndDate).getTime();
-                const now = new Date().getTime();
-                const distance = end - now;
-
-                if (distance < 0) {
-                    setTimeLeft('EXPIRED');
-                    clearInterval(timer);
-                } else {
-                    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-                    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-                    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-
-                    let timeString = '';
-                    switch (timerFormat) {
-                        case 'dd:hh:mm:ss':
-                            timeString = `${days}d ${hours}h ${minutes}m ${seconds}s`;
-                            break;
-                        case 'hh:mm:ss':
-                            timeString = `${hours + days * 24}h ${minutes}m ${seconds}s`;
-                            break;
-                        case 'mm:ss':
-                            timeString = `${minutes + (hours + days * 24) * 60}m ${seconds}s`;
-                            break;
-                        default:
-                            timeString = `${days}d ${hours}h ${minutes}m ${seconds}s`;
-                    }
-                    setTimeLeft(timeString);
-                }
-            }, 1000);
-
-            return () => clearInterval(timer);
-        }
-    }, [highlightOption, timerEndDate, timerFormat]);
-
-    // Replace the existing discount tag with dynamic highlight
-    const getHighlightStyles = () => {
-        const baseStyles = {
-            // backgroundColor: highlightStyle === 'soft' ? `${themeColor}10` : 'transparent',
-            color: highlightStyle === 'outline' ? themeColor : 'white',
-            padding: '4px 8px',
-            borderRadius: '4px',
-            fontSize: '12px',
-            border: highlightStyle === 'outline' ? `1px solid ${themeColor}` : 'none',
-            animation: isBlinking ? 'blink 1s infinite' : 'none',
-            backgroundColor: highlightStyle === 'solid' ? themeColor :
-                highlightStyle === 'soft' ? `${themeColor}10` : 'transparent',
-        };
-
-        return baseStyles;
+    // console.log("themeColor: ", themeColor);
+    // console.log("colors", colors);
+  
+    // Calculate dynamic styles based on props
+    const bundleStyles = {
+      container: {
+        // backgroundColor: colors.background || "#FFFFFF",
+        marginTop: `${spacing.bundleTop}px`,
+        marginBottom: `${spacing.bundleBottom}px`,
+      },
+      header: {
+        fontSize: `${typography.header.size}px`,
+        fontWeight:
+          typography.header.weight === "Bold"
+            ? "bold"
+            : typography.header.weight === "Lighter"
+              ? "300"
+              : "normal",
+        color: colors.headerText || "#000000",
+        marginBottom: "20px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+      },
+      headerTitle: {
+        textAlign: alignment,
+        flex: 1,
+      },
+      productContainer: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent:
+          alignment === "center"
+            ? "center"
+            : alignment === "right"
+              ? "flex-end"
+              : "flex-start",
+        gap: "10px",
+        flexWrap: "wrap",
+        flexDirection: "column",
+      },
+      productItem: {
+        display: "flex",
+        flexDirection: "row",
+        alignItems: "center",
+        gap: "12px",
+        width: "100%",
+        // backgroundColor: colors.background || "#FFFFFF",
+        background: colors.background
+          ? `${colors.background}10`
+          : `${themeColor}10`,
+        padding: "10px 14px",
+        border: `${borderThickness.bundle}px solid ${colors.border || "#E1E3E5"}`,
+        borderRadius: getBorderRadius(shapes.bundle),
+        // borderRadius: "5px",
+        // width: `${parseInt(productImageSize) + 30}px`,
+      },
+      productImage: {
+        width: `${productImageSize}px`,
+        // height: `${productImageSize}px`,
+        height: "auto",
+        objectFit: "cover",
+        borderRadius: "5px",
+        overflow: "hidden",
+        // border: "1px solid #E1E3E5",
+      },
+      productTitle: {
+        fontSize: `${typography.titlePrice.size}px`,
+        fontWeight: typography.titlePrice.weight === "Bold" ? "bold" : "normal",
+        color: colors.titleText || "#000000",
+        textAlign: "left",
+        // marginTop: "8px",
+      },
+      productPrice: {
+        fontSize: `${typography.titlePrice.size}px`,
+        fontWeight: typography.titlePrice.weight === "Bold" ? "bold" : "normal",
+        color: colors.price || "#000000",
+        textAlign: "left",
+        display: "flex",
+        flexDirection: "row-reverse",
+        gap: "8px",
+      },
+      comparePrice: {
+        fontSize: `${typography.titlePrice.size - 4}px`,
+        textDecoration: "line-through",
+        color: colors.comparedPrice || "#FF0000",
+        marginLeft: "5px",
+      },
+      quantityContainer: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: colors.quantityBackground
+          ? `${colors.quantityBackground}40`
+          : `${themeColor}40`,
+        borderRadius: "4px",
+        padding: "4px 0px",
+        marginTop: "4px",
+        width: "25px",
+      },
+      quantityText: {
+        fontSize: `${typography.quantityPrice.size}px`,
+        fontWeight:
+          typography.quantityPrice.fontStyle === "Bold" ? "bold" : "normal",
+        color: colors.quantityText || "#000000",
+        lineHeight: "1",
+      },
+      plusIcon: {
+        margin: "0 10px",
+        fontSize: "30px",
+        color: colors.titleText || "#000000",
+      },
+      footer: {
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        backgroundColor: colors.footerBackground || "#F6F6F7",
+        padding: "15px",
+        borderRadius: getBorderRadius(shapes.footer),
+        border: `${borderThickness.footer}px solid ${colors.border || "#E1E3E5"}`,
+        marginTop: `${spacing.footerTop}px`,
+        marginBottom: `${spacing.footerBottom}px`,
+        position: "relative",
+      },
+      footerText: {
+        fontSize: `${typography.titlePrice.size}px`,
+        fontWeight: "bold",
+        color: colors.footerText ? colors.footerText : themeColor,
+        flex: 1,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+      },
+      button: {
+        backgroundColor: colors.buttonBackground
+          ? colors.buttonBackground
+          : themeColor,
+        color: colors.addToCartText || "#FFFFFF",
+        border: `${borderThickness.addToCart}px solid ${colors.buttonBorder ? colors.buttonBorder : themeColor}`,
+        borderRadius: getBorderRadius(shapes.addToCart),
+        padding: "12px 20px",
+        cursor: "pointer",
+        fontSize: `${typography.titlePrice.size}px`,
+        fontWeight: "bold",
+        width: "100%",
+      },
+      highlight: {
+        backgroundColor: colors.highlightBackground
+          ? colors.highlightBackground
+          : themeColor,
+        color: colors.highlightText || "#FFFFFF",
+        padding: "2px 10px",
+        borderRadius: "4px",
+        fontSize: `${typography.highlight.size}px`,
+        fontWeight: typography.highlight.fontStyle === "Bold" ? "bold" : "normal",
+        textAlign: "center",
+        marginBottom: "15px",
+        animation: isBlinking ? "blink 1s infinite" : "none",
+        border: highlightStyle === "outline" ? "1px solid #000" : "none",
+        display: highlightOption !== "none" ? "block" : "none",
+        position: "absolute",
+        top: "-9px",
+        right: "30px",
+      },
+      timer: {
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        marginTop: "5px",
+      },
+      timerTitle: {
+        fontSize: `${typography.highlight.size}px`,
+        color: colors.highlightText || "#FFFFFF",
+        marginBottom: "5px",
+      },
+      timerDigits: {
+        fontSize: `${parseInt(typography.highlight.size) + 2}px`,
+        fontWeight: "bold",
+        color: colors.highlightText || "#FFFFFF",
+      },
     };
-
-    return (
-        <Card>
-            <div style={{ padding: '16px' }}>
-                <Text variant="headingMd" as="h2">Live Preview</Text>
-
-                <div style={{
-                    border: `${borderThickness.bundle}px solid #e1e3e5`,
-                    // backgroundColor: colors.background,
-                    borderRadius: shapes.bundle === 'Rounded' ? '8px' : '0px',
-                    padding: '16px',
-                    marginTop: `${spacing.bundleTop}px`,
-                    marginBottom: `${spacing.bundleBottom}px`,
-                    maxWidth: '400px',
-                    margin: '16px auto'
-                }}>
-                    <div className='bundle-block-title' style={{
-                        display: 'flex',
-                        justifyContent: alignment === 'center' ? 'space-between' :
-                            alignment === 'left' ? 'flex-start' : 'flex-end',
-                        alignItems: 'center',
-                        marginBottom: '16px',
-                        fontSize: `${typography.header.size}px`,
-                        fontWeight: typography.header.weight === 'Bold' ? 'bold' :
-                            typography.header.weight === 'Lighter' ? '300' : 'normal',
-                        color: colors.headerText,
-                    }}>
-                        <Text variant="headingMd" as="h3">{headerText}</Text>
-                        <span style={{ fontSize: '18px', marginLeft: alignment === 'left' ? '12px' : '0' }}>🛒</span>
-                    </div>
-
-                    {/* Dynamic Products */}
-                    {products.map((product, index) => (
-                        <React.Fragment key={product.id}>
-                            <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                padding: '12px',
-                                backgroundColor: colors.background ? `${colors.background}10` : `${themeColor}10`,
-                                borderRadius: '8px',
-                                marginBottom: '8px'
-                            }}>
-                                <div style={{ display: 'flex', alignItems: 'center' }}>
-                                    <div style={{
-                                        // width: '40px',
-                                        // height: '40px',
-                                        width: `${productImageSize}px`,
-                                        height: `${productImageSize}px`,
-                                        backgroundColor: '#fff',
-                                        borderRadius: '4px',
-                                        display: 'flex',
-                                        justifyContent: 'center',
-                                        alignItems: 'center',
-                                        marginRight: '12px',
-                                        border: '1px solid #e1e3e5',
-                                        overflow: 'hidden'
-                                    }}>
-                                        {product.image ? (
-                                            <img
-                                                src={product.image}
-                                                alt={product.name}
-                                                style={{
-                                                    width: '100%',
-                                                    height: '100%',
-                                                    objectFit: 'cover'
-                                                }}
-                                            />
-                                        ) : (
-                                            <svg width="24" style={{
-                                                width: `100%`,
-                                                height: `100%`,
-                                            }} height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M16 4H8C6.89543 4 6 4.89543 6 6V20C6 21.1046 6.89543 22 8 22H16C17.1046 22 18 21.1046 18 20V6C18 4.89543 17.1046 4 16 4Z" stroke="#000" strokeWidth="1.5" />
-                                                <path d="M12 4V2" stroke="#000" strokeWidth="1.5" />
-                                                <path d="M10 4H14" stroke="#000" strokeWidth="1.5" />
-                                            </svg>
-                                        )}
-                                    </div>
-                                    <div>
-                                        <div
-                                            style={{
-                                                fontSize: `${typography.titlePrice.size}px`,
-                                                fontWeight: typography.titlePrice.weight === 'Bold' ? 'bold' : 'normal',
-                                                color: colors.titleText,
-                                            }}>{product.name || 'Select product'}</div>
-                                        <div style={{
-                                            // backgroundColor: themeColor,
-                                            // color: 'white',
-                                            padding: '2px 6px',
-                                            borderRadius: '4px',
-                                            // fontSize: '12px',
-                                            display: 'inline-block',
-                                            fontSize: `${typography.quantityPrice?.size || 13}px`,
-                                            fontWeight: typography.quantityPrice?.weight === 'Bold' ? 'bold' : 'normal',
-                                            backgroundColor: colors.quantityBackground ? colors.quantityBackground : themeColor,
-                                            color: colors.quantityText,
-                                        }}>x{product.quantity}</div>
-                                    </div>
-                                </div>
-                                {settings.showPrices && <div style={{
-                                    fontWeight: 'bold',
-                                    fontSize: `${typography.titlePrice.size}px`,
-                                    color: colors.price,
-                                }}>$0.00</div>}
-                            </div>
-
-                            {/* Plus sign between products */}
-                            {
-                                index < products.length - 1 && (
-                                    <div style={{
-                                        display: 'flex',
-                                        justifyContent: 'center',
-                                        margin: '8px 0',
-                                        fontSize: '20px',
-                                        color: '#5c5f62'
-                                    }}>+</div>
-                                )
-                            }
-                        </React.Fragment>
-                    ))}
-
-                    {/* Dynamic Highlight */}
-                    <div style={{
-                        display: 'flex',
-                        justifyContent: 'flex-end',
-                        margin: '8px 0'
-                    }}>
-                        <div style={getHighlightStyles()}>
-                            {highlightOption === 'timer'
-                                ? `${highlightTimerTitle} ${timeLeft}`
-                                : highlightTitle || 'Unlock Your Discount'
-                            }
-                        </div>
-                    </div>
-
-                    {/* Footer section */}
-                    <div style={{
-                        marginTop: `${spacing.footerTop}px`,
-                        marginBottom: `${spacing.footerBottom}px`,
-                        border: `${borderThickness.footer}px solid #e1e3e5`,
-                        borderRadius: shapes.footer === 'Rounded' ? '8px' : '0px',
-                        padding: '16px',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        backgroundColor: colors.footerBackground,
-                        color: colors.footerText,
-                    }}>
-                        <div style={{ color: themeColor, fontWeight: 'bold' }}>{footerText}</div>
-                        <div style={{ fontWeight: 'bold' }}>$0.00</div>
-                    </div>
-
-                    {/* Claim button */}
-                    <button style={{
-                        width: '100%',
-                        // backgroundColor: themeColor,
-                        // color: 'white',
-                        // border: 'none',
-                        // borderRadius: '4px',
-                        padding: '12px',
-                        fontSize: '16px',
-                        fontWeight: 'bold',
-                        cursor: 'pointer',
-                        borderRadius: shapes.addToCart === 'Rounded' ? '8px' : '0px',
-                        // border: `${borderThickness.addToCart}px solid ${themeColor}`,
-                        backgroundColor: colors.buttonBackground ? colors.buttonBackground : themeColor,
-                        color: colors.addToCartText,
-                        border: `${borderThickness.addToCart}px solid`,
-                        borderColor: colors.buttonBorder ? colors.buttonBorder : themeColor,
-                    }}>
-                        {buttonText}
-                    </button>
+  
+    // Function to render the highlight section based on highlightOption
+    const renderHighlight = () => {
+      if (highlightOption === "none") return null;
+  
+      return (
+        <div className="">
+          <div className="badge_content_wrapper" style={bundleStyles.highlight}>
+            {highlightOption === "text" && <div>{highlightTitle}</div>}
+            {highlightOption === "timer" && (
+              <div className="bundle-timer" style={bundleStyles.timer}>
+                <div className="timer-title" style={bundleStyles.timerTitle}>
+                  {highlightTimerTitle}
                 </div>
+                <div className="timer-digits" style={bundleStyles.timerDigits}>
+                  {timerFormat === "dd:hh:mm:ss" ? "01:23:45:67" : "23:45:67"}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    };
+  
+    console.log("bundleStyles", bundleStyles);
+  
+    // Function to render product items with plus icons between them
+    const renderProductsWithIcons = () => {
+      const items = [];
+      products.forEach((product, index) => {
+        items.push(
+          <div
+            key={`product-${product.id}`}
+            className="bundle-product-item"
+            style={bundleStyles.productItem}
+          >
+            <div className="product-image" style={bundleStyles.productImage}>
+              {product.image ? (
+                <img
+                  src={product.image}
+                  alt={product.name}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    borderRadius: bundleStyles.productImage.borderRadius,
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    // backgroundColor: "#E1E3E5",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {/* {product.name ? product.name.charAt(0) : "P"} */}
+                  <img
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    src="https://app.rapibundle.com/images/shirt.png"
+                    alt=""
+                  />
+                </div>
+              )}
             </div>
-        </Card >
-    ); s
-}
+            <div className="product-contents" style={{ flex: 1 }}>
+              <div
+                className="title_price_container"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div className="product-title" style={bundleStyles.productTitle}>
+                  {product.name || `Product ${index + 1}`}
+                </div>
+                {settings.showPrices && (
+                  <div
+                    className="product-price"
+                    style={bundleStyles.productPrice}
+                  >
+                    $19.99
+                    {settings.showComparePrice && (
+                      <span
+                        className="compare-price"
+                        style={bundleStyles.comparePrice}
+                      >
+                        $29.99
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div
+                className="quantity-container"
+                style={bundleStyles.quantityContainer}
+              >
+                <span className="quantity-text" style={bundleStyles.quantityText}>
+                  x{product.quantity}
+                </span>
+              </div>
+            </div>
+          </div>,
+        );
+  
+        // Add plus icon between products
+        if (index < products.length - 1) {
+          items.push(
+            <div
+              key={`plus-${index}`}
+              className="plus-icon"
+              style={bundleStyles.plusIcon}
+            >
+              +
+            </div>,
+          );
+        }
+      });
+  
+      return items;
+    };
+  
+    return (
+      <Card title="Live Preview">
+        <div className="bundle-preview-container">
+          <div
+            className={`bundle-container template-${selectedTemplate} color-${selectedColor}`}
+            style={bundleStyles.container}
+          >
+            <div className="header-wrapper" style={bundleStyles.header}>
+              {headerText && (
+                <div className="bundle-header" style={bundleStyles.headerTitle}>
+                  {headerText}
+                </div>
+              )}
+              <span>🛒</span>
+            </div>
+  
+            <div
+              className="bundle-product-container"
+              style={bundleStyles.productContainer}
+            >
+              {renderProductsWithIcons()}
+            </div>
+  
+            <div className="footer_wrapper">
+              <div className="bundle-footer" style={bundleStyles.footer}>
+                {renderHighlight()}
+  
+                <div className="footer-text" style={bundleStyles.footerText}>
+                  {footerText}
+                  <span style={{ color: "#000" }}>$59.97</span>
+                </div>
+              </div>
+              <button className="bundle-button" style={bundleStyles.button}>
+                {buttonText}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Card>
+    );
+  }
 
 // Action Function --------- //
 // Add this export at the bottom of the file

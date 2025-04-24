@@ -252,6 +252,41 @@ export default function EditProductBundle() {
     }
   }, [fetcher.data]);
 
+  const allBundleData = {
+    // status, // 'draft' or 'published'
+    bundleName,
+    headerText,
+    alignment,
+    footerText,
+    buttonText,
+    position,
+    publishOption,
+    selectedTemplate,
+    selectedColor,
+    settings,
+    pricingOption,
+    discountPercentage,
+    fixedDiscount,
+    fixedPrice,
+    highlightOption,
+    highlightTitle,
+    highlightTimerTitle,
+    isBlinking,
+    highlightStyle,
+    timerEndDate,
+    timerFormat,
+    products,
+    typography,
+    spacing,
+    shapes,
+    productImageSize,
+    iconStyle,
+    borderThickness,
+    colors,
+  };
+
+  console.log("allBundleData", allBundleData);
+
   return (
     <Page title={bundleName} backAction={{ url: "/app" }}>
       {showBanner && fetcher.data && (
@@ -264,124 +299,125 @@ export default function EditProductBundle() {
           <br />
         </div>
       )}
-
-      <Grid>
-        <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 6, xl: 6 }}>
-          <BundleSettingsCard
-            bundleName={bundleName}
-            setBundleName={setBundleName}
-            headerText={headerText}
-            setHeaderText={setHeaderText}
-            alignment={alignment}
-            setAlignment={setAlignment}
-            footerText={footerText}
-            setFooterText={setFooterText}
-            buttonText={buttonText}
-            setButtonText={setButtonText}
-            position={position}
-            setPosition={setPosition}
-            publishOption={publishOption}
-            setPublishOption={setPublishOption}
-            selectedTemplate={selectedTemplate}
-            setSelectedTemplate={setSelectedTemplate}
-            selectedColor={selectedColor}
-            setSelectedColor={setSelectedColor}
-            settings={settings}
-            handleSettingChange={handleSettingChange}
-            pricingOption={pricingOption}
-            setPricingOption={setPricingOption}
-            discountPercentage={discountPercentage}
-            setDiscountPercentage={setDiscountPercentage}
-            fixedDiscount={fixedDiscount}
-            setFixedDiscount={setFixedDiscount}
-            fixedPrice={fixedPrice}
-            setFixedPrice={setFixedPrice}
-            highlightOption={highlightOption}
-            setHighlightOption={setHighlightOption}
-            highlightTitle={highlightTitle}
-            setHighlightTitle={setHighlightTitle}
-            highlightTimerTitle={highlightTimerTitle}
-            setHighlightTimerTitle={setHighlightTimerTitle}
-            isBlinking={isBlinking}
-            setIsBlinking={setIsBlinking}
-            highlightStyle={highlightStyle}
-            setHighlightStyle={setHighlightStyle}
-            timerEndDate={timerEndDate}
-            setTimerEndDate={setTimerEndDate}
-            timerFormat={timerFormat}
-            setTimerFormat={setTimerFormat}
-            products={products}
-            handleAddProduct={handleAddProduct}
-            handleRemoveProduct={handleRemoveProduct}
-            handleProductNameChange={handleProductNameChange}
-            handleProductQuantityChange={handleProductQuantityChange}
-            setProducts={setProducts}
-            typography={typography}
-            setTypography={setTypography}
-            spacing={spacing}
-            setSpacing={setSpacing}
-            shapes={shapes}
-            setShapes={setShapes}
-            productImageSize={productImageSize}
-            setProductImageSize={setProductImageSize}
-            iconStyle={iconStyle}
-            setIconStyle={setIconStyle}
-            borderThickness={borderThickness}
-            setBorderThickness={setBorderThickness}
-            colors={colors}
-            setColors={setColors}
-          />
-        </Grid.Cell>
-        <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 6, xl: 6 }}>
-          <BundleLivePreview
-            headerText={headerText}
-            alignment={alignment}
-            footerText={footerText}
-            buttonText={buttonText}
-            selectedTemplate={selectedTemplate}
-            selectedColor={selectedColor}
-            settings={settings}
-            products={products} // Add this line
-            // Add new props
-            highlightOption={highlightOption}
-            highlightTitle={highlightTitle}
-            highlightTimerTitle={highlightTimerTitle}
-            timerEndDate={timerEndDate}
-            timerFormat={timerFormat}
-            highlightStyle={highlightStyle}
-            isBlinking={isBlinking}
-            // ... existing props ...
-            typography={typography}
-            spacing={spacing}
-            shapes={shapes}
-            productImageSize={productImageSize}
-            iconStyle={iconStyle}
-            borderThickness={borderThickness}
-            colors={colors}
-          />
-          <br />
-          <InlineStack align="end">
-            <ButtonGroup>
-              <Button
-                onClick={() => handleSave("draft")}
-                loading={fetcher.state === "submitting"}
-              >
-                Save as draft
-              </Button>
-              <Button variant="primary" tone="critical">
-                Delete
-              </Button>
-              <Button
-                variant="primary"
-                onClick={() => handleSave("published")}
-                loading={fetcher.state === "submitting"}
-              >
-                Publish
-              </Button>
-            </ButtonGroup>
-          </InlineStack>
-        </Grid.Cell>
-      </Grid>
+      <div className="add_bundle_grid_wrapper">
+        <Grid>
+          <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 6, xl: 6 }}>
+            <BundleSettingsCard
+              bundleName={bundleName}
+              setBundleName={setBundleName}
+              headerText={headerText}
+              setHeaderText={setHeaderText}
+              alignment={alignment}
+              setAlignment={setAlignment}
+              footerText={footerText}
+              setFooterText={setFooterText}
+              buttonText={buttonText}
+              setButtonText={setButtonText}
+              position={position}
+              setPosition={setPosition}
+              publishOption={publishOption}
+              setPublishOption={setPublishOption}
+              selectedTemplate={selectedTemplate}
+              setSelectedTemplate={setSelectedTemplate}
+              selectedColor={selectedColor}
+              setSelectedColor={setSelectedColor}
+              settings={settings}
+              handleSettingChange={handleSettingChange}
+              pricingOption={pricingOption}
+              setPricingOption={setPricingOption}
+              discountPercentage={discountPercentage}
+              setDiscountPercentage={setDiscountPercentage}
+              fixedDiscount={fixedDiscount}
+              setFixedDiscount={setFixedDiscount}
+              fixedPrice={fixedPrice}
+              setFixedPrice={setFixedPrice}
+              highlightOption={highlightOption}
+              setHighlightOption={setHighlightOption}
+              highlightTitle={highlightTitle}
+              setHighlightTitle={setHighlightTitle}
+              highlightTimerTitle={highlightTimerTitle}
+              setHighlightTimerTitle={setHighlightTimerTitle}
+              isBlinking={isBlinking}
+              setIsBlinking={setIsBlinking}
+              highlightStyle={highlightStyle}
+              setHighlightStyle={setHighlightStyle}
+              timerEndDate={timerEndDate}
+              setTimerEndDate={setTimerEndDate}
+              timerFormat={timerFormat}
+              setTimerFormat={setTimerFormat}
+              products={products}
+              handleAddProduct={handleAddProduct}
+              handleRemoveProduct={handleRemoveProduct}
+              handleProductNameChange={handleProductNameChange}
+              handleProductQuantityChange={handleProductQuantityChange}
+              setProducts={setProducts}
+              typography={typography}
+              setTypography={setTypography}
+              spacing={spacing}
+              setSpacing={setSpacing}
+              shapes={shapes}
+              setShapes={setShapes}
+              productImageSize={productImageSize}
+              setProductImageSize={setProductImageSize}
+              iconStyle={iconStyle}
+              setIconStyle={setIconStyle}
+              borderThickness={borderThickness}
+              setBorderThickness={setBorderThickness}
+              colors={colors}
+              setColors={setColors}
+            />
+          </Grid.Cell>
+          <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 6, xl: 6 }}>
+            <BundleLivePreview
+              headerText={headerText}
+              alignment={alignment}
+              footerText={footerText}
+              buttonText={buttonText}
+              selectedTemplate={selectedTemplate}
+              selectedColor={selectedColor}
+              settings={settings}
+              products={products} // Add this line
+              // Add new props
+              highlightOption={highlightOption}
+              highlightTitle={highlightTitle}
+              highlightTimerTitle={highlightTimerTitle}
+              timerEndDate={timerEndDate}
+              timerFormat={timerFormat}
+              highlightStyle={highlightStyle}
+              isBlinking={isBlinking}
+              // ... existing props ...
+              typography={typography}
+              spacing={spacing}
+              shapes={shapes}
+              productImageSize={productImageSize}
+              iconStyle={iconStyle}
+              borderThickness={borderThickness}
+              colors={colors}
+            />
+            <br />
+            <InlineStack align="end">
+              <ButtonGroup>
+                <Button
+                  onClick={() => handleSave("draft")}
+                  loading={fetcher.state === "submitting"}
+                >
+                  Save as draft
+                </Button>
+                <Button variant="primary" tone="critical">
+                  Delete
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => handleSave("published")}
+                  loading={fetcher.state === "submitting"}
+                >
+                  Publish
+                </Button>
+              </ButtonGroup>
+            </InlineStack>
+          </Grid.Cell>
+        </Grid>
+      </div>
       <br />
       <br />
     </Page>
@@ -518,6 +554,8 @@ function BundleSettingsCard({
     (_, value) => setPublishOption(value),
     [],
   );
+
+  // const AllSettings = {}
 
   return (
     <Card>
@@ -997,7 +1035,6 @@ function BundleSettingsCard({
                   </div>
                 </div>
               </div>
-              
             </BlockStack>
 
             {/* Additional settings */}
@@ -2213,6 +2250,8 @@ function BundleLivePreview({
     return (
       <div className="">
         <div className="badge_content_wrapper" style={bundleStyles.highlight}>
+          <i></i>
+
           {highlightOption === "text" && <div>{highlightTitle}</div>}
           {highlightOption === "timer" && (
             <div className="bundle-timer" style={bundleStyles.timer}>
@@ -2224,6 +2263,7 @@ function BundleLivePreview({
               </div>
             </div>
           )}
+          <i></i>
         </div>
       </div>
     );
