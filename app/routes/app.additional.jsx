@@ -17,11 +17,12 @@ import {
 } from "@shopify/polaris";
 import React, { useState, useCallback, useEffect } from "react";
 import { DeleteIcon } from "@shopify/polaris-icons";
-import "./_index/styles.module.css";
+// import "./_index/styles.module.css";
 import prisma from "../db.server";
 import { json, useFetcher } from "@remix-run/react";
 import { authenticate } from "../shopify.server";
 import "./_index/style.css";
+// import badgeBg from "./assets/images/offer-badge-png.png";
 
 export default function EditProductBundle() {
   // Lift state up from BundleSettingsCard
@@ -78,15 +79,15 @@ export default function EditProductBundle() {
   // console.log("products", products)
   // First, add these new state variables at the top of your EditProductBundle component
   const [typography, setTypography] = useState({
-    header: { size: "16", weight: "Lighter" },
-    titlePrice: { size: "15", weight: "Bold" },
+    header: { size: "18", weight: "Bold" },
+    titlePrice: { size: "16", weight: "Bold" },
     quantityPrice: { size: "13", fontStyle: "Regular" },
-    highlight: { size: "12", fontStyle: "Regular" },
+    highlight: { size: "10.5", fontStyle: "Bold" },
   });
   const [spacing, setSpacing] = useState({
     bundleTop: "10",
     bundleBottom: "6",
-    footerTop: "30",
+    footerTop: "20",
     footerBottom: "10",
   });
   const [shapes, setShapes] = useState({
@@ -94,7 +95,7 @@ export default function EditProductBundle() {
     footer: "Rounded",
     addToCart: "Rounded",
   });
-  const [productImageSize, setProductImageSize] = useState("68");
+  const [productImageSize, setProductImageSize] = useState("56");
   const [iconStyle, setIconStyle] = useState("Plus 5");
   const [borderThickness, setBorderThickness] = useState({
     bundle: "1",
@@ -110,7 +111,7 @@ export default function EditProductBundle() {
     footerBackground: "#F6F6F7",
     buttonBackground: "",
     buttonBorder: "",
-    highlightBackground: "#FF6B6B",
+    highlightBackground: "",
     quantityBackground: "",
     price: "#000000",
     comparedPrice: "#FF0000",
@@ -119,7 +120,7 @@ export default function EditProductBundle() {
     highlightText: "#FFFFFF",
     addToCartText: "#FFFFFF",
     quantityText: "#000000",
-    footerText: "#000000",
+    footerText: "",
   });
   // console.log("products", products)
 
@@ -996,6 +997,7 @@ function BundleSettingsCard({
                   </div>
                 </div>
               </div>
+              
             </BlockStack>
 
             {/* Additional settings */}
@@ -1993,244 +1995,335 @@ function BundleLivePreview({
   // Helper function to get border radius based on shape type
   const getBorderRadius = (shapeType) => {
     switch (shapeType) {
-      case 'Rounded':
-        return '8px';
-      case 'Pill':
-        return '50px';
-      case 'Square':
-        return '0px';
+      case "Rounded":
+        return "10px";
+      case "Pill":
+        return "50px";
+      case "Squared":
+        return "0px";
       default:
-        return '8px';
+        return "8px";
     }
   };
 
   // Get the color for the preview based on the selected color
   const getColorValue = (color) => {
     const colorMap = {
-        'black': '#000000',
-        'purple': '#6F42C1',
-        'blue': '#4285F4',
-        'teal': '#20B2AA',
-        'green': '#4CAF50',
-        'pink': '#FF69B4',
-        'red': '#FF0000',
-        'orange': '#FFA500',
-        'yellow': '#FFFF00',
-        'mint': '#98FB98'
+      black: "#000000",
+      purple: "#6F42C1",
+      blue: "#4285F4",
+      teal: "#20B2AA",
+      green: "#4CAF50",
+      pink: "#FF69B4",
+      red: "#FF0000",
+      orange: "#FFA500",
+      yellow: "#FFFF00",
+      mint: "#98FB98",
     };
-    return colorMap[color] || '#FF6B6B';
-};
+    return colorMap[color] || "#FF6B6B";
+  };
 
-const themeColor = getColorValue(selectedColor);
+  const themeColor = getColorValue(selectedColor);
+  // console.log("themeColor: ", themeColor);
+  // console.log("colors", colors);
 
   // Calculate dynamic styles based on props
   const bundleStyles = {
     container: {
-      padding: '20px',
-      border: `${borderThickness.bundle}px solid ${colors.border || '#E1E3E5'}`,
-      borderRadius: getBorderRadius(shapes.bundle),
-      backgroundColor: colors.background || '#FFFFFF',
+      // backgroundColor: colors.background || "#FFFFFF",
       marginTop: `${spacing.bundleTop}px`,
       marginBottom: `${spacing.bundleBottom}px`,
     },
     header: {
       fontSize: `${typography.header.size}px`,
-      fontWeight: typography.header.weight === 'Bold' ? 'bold' :
-        typography.header.weight === 'Lighter' ? '300' : 'normal',
-      color: colors.headerText || '#000000',
+      fontWeight:
+        typography.header.weight === "Bold"
+          ? "bold"
+          : typography.header.weight === "Lighter"
+            ? "300"
+            : "normal",
+      color: colors.headerText || "#000000",
+      marginBottom: "20px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    headerTitle: {
       textAlign: alignment,
-      marginBottom: '15px',
+      flex: 1,
     },
     productContainer: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: alignment === 'center' ? 'center' :
-        alignment === 'right' ? 'flex-end' : 'flex-start',
-      gap: '15px',
-      flexWrap: 'wrap',
-      flexDirection: 'column',
+      display: "flex",
+      alignItems: "center",
+      justifyContent:
+        alignment === "center"
+          ? "center"
+          : alignment === "right"
+            ? "flex-end"
+            : "flex-start",
+      gap: "10px",
+      flexWrap: "wrap",
+      flexDirection: "column",
     },
     productItem: {
-      display: 'flex',
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: '12px',
-      width: '100%',
+      display: "flex",
+      flexDirection: "row",
+      alignItems: "center",
+      gap: "12px",
+      width: "100%",
+      // backgroundColor: colors.background || "#FFFFFF",
+      background: colors.background
+        ? `${colors.background}10`
+        : `${themeColor}10`,
+      padding: "10px 14px",
+      border: `${borderThickness.bundle}px solid ${colors.border || "#E1E3E5"}`,
+      borderRadius: getBorderRadius(shapes.bundle),
+      // borderRadius: "5px",
       // width: `${parseInt(productImageSize) + 30}px`,
     },
     productImage: {
       width: `${productImageSize}px`,
-      height: `${productImageSize}px`,
-      objectFit: 'cover',
-      borderRadius: '4px',
-      border: '1px solid #E1E3E5',
+      // height: `${productImageSize}px`,
+      height: "auto",
+      objectFit: "cover",
+      borderRadius: "5px",
+      overflow: "hidden",
+      // border: "1px solid #E1E3E5",
     },
     productTitle: {
       fontSize: `${typography.titlePrice.size}px`,
-      fontWeight: typography.titlePrice.weight === 'Bold' ? 'bold' : 'normal',
-      color: colors.titleText || '#000000',
-      textAlign: 'center',
-      marginTop: '8px',
+      fontWeight: typography.titlePrice.weight === "Bold" ? "bold" : "normal",
+      color: colors.titleText || "#000000",
+      textAlign: "left",
+      // marginTop: "8px",
     },
     productPrice: {
       fontSize: `${typography.titlePrice.size}px`,
-      fontWeight: typography.titlePrice.weight === 'Bold' ? 'bold' : 'normal',
-      color: colors.price || '#000000',
-      textAlign: 'center',
+      fontWeight: typography.titlePrice.weight === "Bold" ? "bold" : "normal",
+      color: colors.price || "#000000",
+      textAlign: "left",
+      display: "flex",
+      flexDirection: "row-reverse",
+      gap: "8px",
     },
     comparePrice: {
-      fontSize: `${typography.titlePrice.size - 2}px`,
-      textDecoration: 'line-through',
-      color: colors.comparedPrice || '#FF0000',
-      marginLeft: '5px',
+      fontSize: `${typography.titlePrice.size - 4}px`,
+      textDecoration: "line-through",
+      color: colors.comparedPrice || "#FF0000",
+      marginLeft: "5px",
     },
     quantityContainer: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: `${colors.quantityBackground}40` || `${themeColor}40`,
-      borderRadius: '4px',
-      padding: '4px 0px',
-      marginTop: '4px',
-      width: '25px',
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.quantityBackground
+        ? `${colors.quantityBackground}40`
+        : `${themeColor}40`,
+      borderRadius: "4px",
+      padding: "4px 0px",
+      marginTop: "4px",
+      width: "25px",
     },
     quantityText: {
       fontSize: `${typography.quantityPrice.size}px`,
-      fontWeight: typography.quantityPrice.fontStyle === 'Bold' ? 'bold' : 'normal',
-      color: colors.quantityText || '#000000',
+      fontWeight:
+        typography.quantityPrice.fontStyle === "Bold" ? "bold" : "normal",
+      color: colors.quantityText || "#000000",
+      lineHeight: "1",
     },
     plusIcon: {
-      margin: '0 10px',
-      fontSize: '16px',
-      color: colors.titleText || '#000000',
+      margin: "0 10px",
+      fontSize: "30px",
+      color: colors.titleText || "#000000",
     },
     footer: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      backgroundColor: colors.footerBackground || '#F6F6F7',
-      padding: '15px',
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      backgroundColor: colors.footerBackground || "#F6F6F7",
+      padding: "15px",
       borderRadius: getBorderRadius(shapes.footer),
-      border: `${borderThickness.footer}px solid ${colors.border || '#E1E3E5'}`,
+      border: `${borderThickness.footer}px solid ${colors.border || "#E1E3E5"}`,
       marginTop: `${spacing.footerTop}px`,
       marginBottom: `${spacing.footerBottom}px`,
+      position: "relative",
     },
     footerText: {
       fontSize: `${typography.titlePrice.size}px`,
-      fontWeight: 'bold',
-      color: colors.footerText || '#000000',
+      fontWeight: "bold",
+      color: colors.footerText ? colors.footerText : themeColor,
+      flex: 1,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
     },
     button: {
-      backgroundColor: colors.buttonBackground || '#008060',
-      color: colors.addToCartText || '#FFFFFF',
-      border: `${borderThickness.addToCart}px solid ${colors.buttonBorder || '#008060'}`,
+      backgroundColor: colors.buttonBackground
+        ? colors.buttonBackground
+        : themeColor,
+      color: colors.addToCartText || "#FFFFFF",
+      border: `${borderThickness.addToCart}px solid ${colors.buttonBorder ? colors.buttonBorder : themeColor}`,
       borderRadius: getBorderRadius(shapes.addToCart),
-      padding: '10px 20px',
-      cursor: 'pointer',
+      padding: "12px 20px",
+      cursor: "pointer",
       fontSize: `${typography.titlePrice.size}px`,
-      fontWeight: 'bold',
+      fontWeight: "bold",
+      width: "100%",
     },
     highlight: {
-      backgroundColor: colors.highlightBackground || '#FF6B6B',
-      color: colors.highlightText || '#FFFFFF',
-      padding: '8px 12px',
-      borderRadius: '4px',
+      backgroundColor: colors.highlightBackground
+        ? colors.highlightBackground
+        : themeColor,
+      color: colors.highlightText || "#FFFFFF",
+      padding: "2px 10px",
+      borderRadius: "4px",
       fontSize: `${typography.highlight.size}px`,
-      fontWeight: typography.highlight.fontStyle === 'Bold' ? 'bold' : 'normal',
-      textAlign: 'center',
-      marginBottom: '15px',
-      animation: isBlinking ? 'blink 1s infinite' : 'none',
-      border: highlightStyle === 'outline' ? '1px solid #000' : 'none',
-      display: highlightOption !== 'none' ? 'block' : 'none',
+      fontWeight: typography.highlight.fontStyle === "Bold" ? "bold" : "normal",
+      textAlign: "center",
+      marginBottom: "15px",
+      animation: isBlinking ? "blink 1s infinite" : "none",
+      border: highlightStyle === "outline" ? "1px solid #000" : "none",
+      display: highlightOption !== "none" ? "block" : "none",
+      position: "absolute",
+      top: "-9px",
+      right: "30px",
     },
     timer: {
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      marginTop: '5px',
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      marginTop: "5px",
     },
     timerTitle: {
       fontSize: `${typography.highlight.size}px`,
-      color: colors.highlightText || '#FFFFFF',
-      marginBottom: '5px',
+      color: colors.highlightText || "#FFFFFF",
+      marginBottom: "5px",
     },
     timerDigits: {
       fontSize: `${parseInt(typography.highlight.size) + 2}px`,
-      fontWeight: 'bold',
-      color: colors.highlightText || '#FFFFFF',
+      fontWeight: "bold",
+      color: colors.highlightText || "#FFFFFF",
     },
   };
 
   // Function to render the highlight section based on highlightOption
   const renderHighlight = () => {
-    if (highlightOption === 'none') return null;
+    if (highlightOption === "none") return null;
 
     return (
-      <div className="bundle-highlight" style={bundleStyles.highlight}>
-        {highlightOption === 'text' && (
-          <div>{highlightTitle}</div>
-        )}
-        {highlightOption === 'timer' && (
-          <div className="bundle-timer" style={bundleStyles.timer}>
-            <div className="timer-title" style={bundleStyles.timerTitle}>{highlightTimerTitle}</div>
-            <div className="timer-digits" style={bundleStyles.timerDigits}>
-              {timerFormat === 'dd:hh:mm:ss' ? '01:23:45:67' : '23:45:67'}
+      <div className="">
+        <div className="badge_content_wrapper" style={bundleStyles.highlight}>
+          {highlightOption === "text" && <div>{highlightTitle}</div>}
+          {highlightOption === "timer" && (
+            <div className="bundle-timer" style={bundleStyles.timer}>
+              <div className="timer-title" style={bundleStyles.timerTitle}>
+                {highlightTimerTitle}
+              </div>
+              <div className="timer-digits" style={bundleStyles.timerDigits}>
+                {timerFormat === "dd:hh:mm:ss" ? "01:23:45:67" : "23:45:67"}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     );
   };
 
-  console.log('bundleStyles', bundleStyles);
+  console.log("bundleStyles", bundleStyles);
 
   // Function to render product items with plus icons between them
   const renderProductsWithIcons = () => {
     const items = [];
     products.forEach((product, index) => {
       items.push(
-        <div key={`product-${product.id}`} className="bundle-product-item" style={bundleStyles.productItem}>
+        <div
+          key={`product-${product.id}`}
+          className="bundle-product-item"
+          style={bundleStyles.productItem}
+        >
           <div className="product-image" style={bundleStyles.productImage}>
-            {product.image ?
-              <img src={product.image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> :
-              <div style={{
-                width: '100%',
-                height: '100%',
-                backgroundColor: '#E1E3E5',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-                {product.name ? product.name.charAt(0) : 'P'}
-              </div>
-            }
-
-          </div>
-          <div className="product-contents">
-            <div className="product-title" style={bundleStyles.productTitle}>
-              {product.name || `Product ${index + 1}`}
-            </div>
-            {settings.showPrices && (
-              <div className="product-price" style={bundleStyles.productPrice}>
-                $19.99
-                {settings.showComparePrice && (
-                  <span className="compare-price" style={bundleStyles.comparePrice}>$29.99</span>
-                )}
+            {product.image ? (
+              <img
+                src={product.image}
+                alt={product.name}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  borderRadius: bundleStyles.productImage.borderRadius,
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  // backgroundColor: "#E1E3E5",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {/* {product.name ? product.name.charAt(0) : "P"} */}
+                <img
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  src="https://app.rapibundle.com/images/shirt.png"
+                  alt=""
+                />
               </div>
             )}
-            <div className="quantity-container" style={bundleStyles.quantityContainer}>
-              <span className="quantity-text" style={bundleStyles.quantityText}>x{product.quantity}</span>
+          </div>
+          <div className="product-contents" style={{ flex: 1 }}>
+            <div
+              className="title_price_container"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <div className="product-title" style={bundleStyles.productTitle}>
+                {product.name || `Product ${index + 1}`}
+              </div>
+              {settings.showPrices && (
+                <div
+                  className="product-price"
+                  style={bundleStyles.productPrice}
+                >
+                  $19.99
+                  {settings.showComparePrice && (
+                    <span
+                      className="compare-price"
+                      style={bundleStyles.comparePrice}
+                    >
+                      $29.99
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+            <div
+              className="quantity-container"
+              style={bundleStyles.quantityContainer}
+            >
+              <span className="quantity-text" style={bundleStyles.quantityText}>
+                x{product.quantity}
+              </span>
             </div>
           </div>
-        </div>
+        </div>,
       );
 
       // Add plus icon between products
       if (index < products.length - 1) {
         items.push(
-          <div key={`plus-${index}`} className="plus-icon" style={bundleStyles.plusIcon}>
+          <div
+            key={`plus-${index}`}
+            className="plus-icon"
+            style={bundleStyles.plusIcon}
+          >
             +
-          </div>
+          </div>,
         );
       }
     });
@@ -2240,19 +2333,35 @@ const themeColor = getColorValue(selectedColor);
 
   return (
     <Card title="Live Preview">
-      <div className="bundle-preview-container" style={{ padding: '16px' }}>
-        <div className={`bundle-container template-${selectedTemplate} color-${selectedColor}`} style={bundleStyles.container}>
-          {renderHighlight()}
+      <div className="bundle-preview-container">
+        <div
+          className={`bundle-container template-${selectedTemplate} color-${selectedColor}`}
+          style={bundleStyles.container}
+        >
+          <div className="header-wrapper" style={bundleStyles.header}>
+            {headerText && (
+              <div className="bundle-header" style={bundleStyles.headerTitle}>
+                {headerText}
+              </div>
+            )}
+            <span>🛒</span>
+          </div>
 
-          {headerText && <div className="bundle-header" style={bundleStyles.header}>{headerText}</div>}
-
-          <div className="bundle-product-container" style={bundleStyles.productContainer}>
+          <div
+            className="bundle-product-container"
+            style={bundleStyles.productContainer}
+          >
             {renderProductsWithIcons()}
           </div>
 
-          <div className="bundle-footer" style={bundleStyles.footer}>
-            <div className="footer-text" style={bundleStyles.footerText}>
-              {footerText} $59.97
+          <div className="footer_wrapper">
+            <div className="bundle-footer" style={bundleStyles.footer}>
+              {renderHighlight()}
+
+              <div className="footer-text" style={bundleStyles.footerText}>
+                {footerText}
+                <span style={{ color: "#000" }}>$59.97</span>
+              </div>
             </div>
             <button className="bundle-button" style={bundleStyles.button}>
               {buttonText}
