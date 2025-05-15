@@ -703,72 +703,6 @@ export default function BundleSettingsCard({
                 <label htmlFor="redirectToNewTab">Redirect to a new Tab</label>
               </InlineStack>
             </BlockStack>
-
-            {/* Custom placement code */}
-            <BlockStack gap="300">
-              <Text variant="headingMd" as="h3">
-                Use this code for custom placement or page builders (Optional)
-              </Text>
-              <div
-                style={{
-                  border: "1px solid #e1e3e5",
-                  borderRadius: "4px",
-                  padding: "8px",
-                  background: "#f9fafb",
-                  position: "relative",
-                }}
-              >
-                <code style={{ color: "#bf0711" }}>
-                  &lt;div data-rapi-id="rapi_632ed6a3e996fc"&gt;&lt;/div&gt;
-                </code>
-                <button
-                  style={{
-                    position: "absolute",
-                    right: "8px",
-                    top: "8px",
-                    background: "transparent",
-                    border: "none",
-                    cursor: "pointer",
-                  }}
-                  onClick={() => {
-                    navigator.clipboard.writeText(
-                      '<div data-rapi-id="rapi_632ed6a3e996fc"></div>',
-                    );
-                  }}
-                >
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 20 20"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path d="M8 2H16V10" stroke="#5C5F62" strokeWidth="2" />
-                    <path d="M16 2L8 10" stroke="#5C5F62" strokeWidth="2" />
-                    <path
-                      d="M12 12V18H2V8H8"
-                      stroke="#5C5F62"
-                      strokeWidth="2"
-                    />
-                  </svg>
-                </button>
-              </div>
-            </BlockStack>
-
-            {/* Existing position and publish sections */}
-            <BlockStack gap="300">
-              <Text variant="headingMd" as="h3">
-                Position
-              </Text>
-              {/* Position radio buttons */}
-            </BlockStack>
-
-            <BlockStack gap="300">
-              <Text variant="headingMd" as="h3">
-                Publish Bundle
-              </Text>
-              {/* Publish radio buttons */}
-            </BlockStack>
           </BlockStack>
         )}
 
@@ -1607,3 +1541,25 @@ export default function BundleSettingsCard({
     </Card>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

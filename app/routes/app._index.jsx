@@ -320,6 +320,7 @@ export default function Dashboard() {
         onClose={handleCloseModal}
         title="Select type of bundle"
         titleHidden={false}
+        size="large"
       >
         <Modal.Section>
           <div style={{ display: 'flex', gap: '20px' }}>
@@ -427,18 +428,18 @@ export default function Dashboard() {
                 borderRadius: '8px',
                 padding: '10px',
                 textAlign: 'center',
-                marginBottom: '20px'
+                marginBottom: '10px'
               }}>
                 <Text variant="bodyMd" as="p" fontWeight="medium">
                   Combo Product
                 </Text>
               </div>
 
-              <Text variant="bodyMd" as="p" color="subdued">
+              <Text variant="bodyXs" as="p" color="subdued">
                 Your customers can buy related products with one single click.
               </Text>
 
-              <div style={{ marginTop: 'auto', paddingTop: '20px' }}>
+              <div style={{ marginTop: 'auto', paddingTop: '10px' }}>
                 <Button fullWidth variant='primary' url='/app/product-bundle'>Create the deal</Button>
               </div>
             </div>
@@ -564,18 +565,18 @@ export default function Dashboard() {
                 borderRadius: '8px',
                 padding: '10px',
                 textAlign: 'center',
-                marginBottom: '20px'
+                marginBottom: '10px'
               }}>
                 <Text variant="bodyMd" as="p" fontWeight="medium">
                   Volume Discounts
                 </Text>
               </div>
 
-              <Text variant="bodyMd" as="p" color="subdued">
+              <Text variant="bodyXs" as="p" color="subdued">
                 Increase your average order value with volume discount.
               </Text>
 
-              <div style={{ marginTop: 'auto', paddingTop: '20px' }}>
+              <div style={{ marginTop: 'auto', paddingTop: '10px' }}>
                 <Button fullWidth variant='primary'>Create the deal</Button>
               </div>
             </div>

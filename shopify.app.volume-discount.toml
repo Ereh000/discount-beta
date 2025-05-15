@@ -3,7 +3,7 @@
 client_id = "1a4e521070ed78bb816b9cbf882f1d1c"
 name = "Volume Discount"
 handle = "volume-discount-107"
-application_url = "https://terminology-porcelain-karma-telling.trycloudflare.com"
+application_url = "https://statute-noise-trends-maintained.trycloudflare.com"
 embedded = true
 
 [build]
@@ -19,9 +19,9 @@ scopes = "write_products"
 
 [auth]
 redirect_urls = [
-  "https://terminology-porcelain-karma-telling.trycloudflare.com/auth/callback",
-  "https://terminology-porcelain-karma-telling.trycloudflare.com/auth/shopify/callback",
-  "https://terminology-porcelain-karma-telling.trycloudflare.com/api/auth/callback"
+  "https://statute-noise-trends-maintained.trycloudflare.com/auth/callback",
+  "https://statute-noise-trends-maintained.trycloudflare.com/auth/shopify/callback",
+  "https://statute-noise-trends-maintained.trycloudflare.com/api/auth/callback"
 ]
 
 [pos]

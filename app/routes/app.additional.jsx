@@ -9,7 +9,7 @@ import {
   Banner,
 } from "@shopify/polaris";
 import React, { useState, useCallback, useEffect } from "react";
-import { json, useFetcher } from "@remix-run/react";
+import { useFetcher } from "@remix-run/react";
 import "./_index/style.css";
 import BundleSettingsCard from "../Components/Productbundle/BundleSettings";
 import BundleLivePreview from "../Components/Productbundle/BundleLivePreview";
