@@ -439,7 +439,7 @@ export default function Dashboard() {
               </Text>
 
               <div style={{ marginTop: 'auto', paddingTop: '20px' }}>
-                <Button fullWidth variant='primary' url='/app/add-product-bundle'>Create the deal</Button>
+                <Button fullWidth variant='primary' url='/app/product-bundle'>Create the deal</Button>
               </div>
             </div>
 
