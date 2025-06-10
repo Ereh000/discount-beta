@@ -15,8 +15,10 @@ import {
   ColorPicker,
   Popover,
   Tabs,
+  ButtonGroup
 } from "@shopify/polaris";
 import {
+  AlertCircleIcon,
   QuestionCircleIcon,
   DeleteIcon,
   PlusIcon,
@@ -46,6 +48,24 @@ export default function VolumeSettings() {
   const [popoverActive, setPopoverActive] = useState(false);
   const [colorPickerIndex, setColorPickerIndex] = useState(0);
 
+  // State for Offers tab
+  const [offers, setOffers] = useState([
+    {
+      id: 1,
+      title: "Single",
+      subtitle: "Standard price",
+      quantity: 1,
+      priceType: "default", // "default" or "buy_get"
+      buyQuantity: 1,
+      getQuantity: 1,
+      highlight: false,
+      selectedByDefault: true,
+      tag: "",
+      image: null, // Placeholder for image data/url
+    },
+  ]);
+  const [activeOfferIndex, setActiveOfferIndex] = useState(0); // Index of the currently selected offer
+
   const handleTabChange = (selectedTabIndex) => {
     setSelected(selectedTabIndex);
   };
@@ -72,6 +92,40 @@ export default function VolumeSettings() {
     const newSwatchColors = [...swatchColors];
     newSwatchColors.splice(index, 1);
     setSwatchColors(newSwatchColors);
+  };
+
+
+  // Handlers for Offers tab
+  const handleOfferChange = (index, field, value) => {
+    const newOffers = [...offers];
+    newOffers[index][field] = value;
+    setOffers(newOffers);
+  };
+
+  const handleAddOffer = () => {
+    const newOffer = {
+      id: offers.length + 1,
+      title: `Offer ${offers.length + 1}`,
+      subtitle: "",
+      quantity: 1,
+      priceType: "default",
+      buyQuantity: 1,
+      getQuantity: 1,
+      highlight: false,
+      selectedByDefault: false,
+      tag: "",
+      image: null,
+    };
+    setOffers([...offers, newOffer]);
+    setActiveOfferIndex(offers.length); // Select the new offer
+  };
+
+  const handleRemoveOffer = (index) => {
+    if (offers.length > 1) {
+      const newOffers = offers.filter((_, i) => i !== index);
+      setOffers(newOffers);
+      setActiveOfferIndex(Math.max(0, index - 1)); // Select the previous offer, or the first if deleting the first
+    }
   };
 
   const tabs = [
@@ -114,6 +168,8 @@ export default function VolumeSettings() {
   ];
 
   const renderTabContent = () => {
+    const activeOffer = offers[activeOfferIndex];
+
     switch (selected) {
       case 0: // Block tab
         return (
@@ -624,9 +680,178 @@ export default function VolumeSettings() {
         );
       case 1: // Offers tab
         return (
-          <BlockStack>
-            <Text variant="headingMd">Offers settings content</Text>
-            <Text>Configure your volume discount offers here</Text>
+          <BlockStack gap="400">
+            <InlineStack align="space-between">
+              <ButtonGroup segmented>
+                {offers.map((offer, index) => (
+                  <Button
+                    key={offer.id}
+                    pressed={activeOfferIndex === index}
+                    onClick={() => setActiveOfferIndex(index)}
+                  >
+                    {`Offer ${index + 1}`}
+                  </Button>
+                ))}
+              </ButtonGroup>
+              <Button onClick={handleAddOffer}>Add New Offer</Button>
+            </InlineStack>
+
+            {activeOffer && ( // Render only if an offer is selected
+              <BlockStack gap="400">
+                <InlineStack align="space-between">
+                  <Text variant="headingMd">{`Offer #${activeOfferIndex + 1}`}</Text>
+                  {offers.length > 1 && (
+                    <Button
+                      icon={DeleteIcon}
+                      plain
+                      monochrome
+                      onClick={() => handleRemoveOffer(activeOfferIndex)}
+                      accessibilityLabel={`Remove Offer ${activeOfferIndex + 1}`}
+                    />
+                  )}
+                </InlineStack>
+
+                <InlineStack gap="400" align="start">
+                  <TextField
+                    label="Title"
+                    value={activeOffer.title}
+                    onChange={(value) => handleOfferChange(activeOfferIndex, "title", value)}
+                    placeholder="Single"
+                    autoComplete="off"
+                  />
+                  <TextField
+                    label="Subtitle"
+                    value={activeOffer.subtitle}
+                    onChange={(value) => handleOfferChange(activeOfferIndex, "subtitle", value)}
+                    placeholder="Standard price"
+                    autoComplete="off"
+                  />
+                  <TextField
+                    label="Quantity"
+                    value={activeOffer.quantity.toString()}
+                    onChange={(value) => handleOfferChange(activeOfferIndex, "quantity", parseInt(value) || 0)}
+                    type="number"
+                    placeholder="1"
+                    autoComplete="off"
+                    min={1}
+                  />
+                </InlineStack>
+
+                <BlockStack>
+                  <InlineStack gap="2" align="start">
+                    <Text variant="bodyMd" fontWeight="bold">Image (Optional)</Text>
+                    <Tooltip content="Add an image to represent this offer">
+                      <Icon source={QuestionCircleIcon} color="base" />
+                    </Tooltip>
+                  </InlineStack>
+                  <Button icon={PlusIcon}>Add Image</Button>
+                  {/* Add logic here to display/manage the image */}
+                </BlockStack>
+
+                <BlockStack>
+                  <InlineStack gap="2" align="start">
+                    <Text variant="bodyMd" fontWeight="bold">Price</Text>
+                    <Tooltip content="Important Note about pricing">
+                      <Text as="span" color="warning">Important Note</Text>
+                    </Tooltip>
+                  </InlineStack>
+                  <BlockStack gap="200">
+                    <RadioButton
+                      label="Default"
+                      checked={activeOffer.priceType === "default"}
+                      id={`price-default-${activeOffer.id}`}
+                      name={`price-type-${activeOffer.id}`}
+                      onChange={() => handleOfferChange(activeOfferIndex, "priceType", "default")}
+                    />
+                    <InlineStack gap="200" alignment="center">
+                      <RadioButton
+                        label="Buy"
+                        checked={activeOffer.priceType === "buy_get"}
+                        id={`price-buy-get-${activeOffer.id}`}
+                        name={`price-type-${activeOffer.id}`}
+                        onChange={() => handleOfferChange(activeOfferIndex, "priceType", "buy_get")}
+                      />
+                      <TextField
+                        label=""
+                        labelHidden
+                        value={activeOffer.buyQuantity.toString()}
+                        onChange={(value) => handleOfferChange(activeOfferIndex, "buyQuantity", parseInt(value) || 0)}
+                        type="number"
+                        autoComplete="off"
+                        min={1}
+                        disabled={activeOffer.priceType !== "buy_get"}
+                        alignment="center"
+                        style={{ width: '60px' }} // Adjust width as needed
+                      />
+                      <Text variant="bodyMd">Get</Text>
+                      <TextField
+                        label=""
+                        labelHidden
+                        value={activeOffer.getQuantity.toString()}
+                        onChange={(value) => handleOfferChange(activeOfferIndex, "getQuantity", parseInt(value) || 0)}
+                        type="number"
+                        autoComplete="off"
+                        min={1}
+                        disabled={activeOffer.priceType !== "buy_get"}
+                        alignment="center"
+                        style={{ width: '60px' }} // Adjust width as needed
+                      />
+                      <Text variant="bodyMd">for free</Text>
+                    </InlineStack>
+                  </BlockStack>
+                </BlockStack>
+
+                <BlockStack>
+                  <Text variant="bodyMd" fontWeight="bold">Highlight</Text>
+                  <Checkbox
+                    label="Highlight this offer (Optional)"
+                    checked={activeOffer.highlight}
+                    onChange={(value) => handleOfferChange(activeOfferIndex, "highlight", value)}
+                  />
+                </BlockStack>
+
+                <Checkbox
+                  label="Selected by default"
+                  checked={activeOffer.selectedByDefault}
+                  onChange={(value) => handleOfferChange(activeOfferIndex, "selectedByDefault", value)}
+                />
+
+                <BlockStack>
+                  <InlineStack gap="2" align="start">
+                    <Text variant="bodyMd" fontWeight="bold">Tag(Optional)</Text>
+                    <Tooltip content="Add a tag to this offer">
+                      <Icon source={QuestionCircleIcon} color="base" />
+                    </Tooltip>
+                  </InlineStack>
+                  <TextField
+                    label=""
+                    labelHidden
+                    value={activeOffer.tag}
+                    onChange={(value) => handleOfferChange(activeOfferIndex, "tag", value)}
+                    autoComplete="off"
+                  />
+                </BlockStack>
+
+                <InlineStack gap="400">
+                  <Button disabled>Add upsell</Button> {/* Assuming disabled based on image */}
+                  <Button disabled >Add a free gift</Button> {/* Assuming disabled based on image */}
+                </InlineStack>
+
+                {/* Plan warning message */}
+                <Card background="bg-warning" padding="400">
+                  <BlockStack gap="200">
+                    <InlineStack gap="200" align="start">
+                      <Icon source={AlertCircleIcon} color="warning" />
+                      <Text variant="bodyMd" color="warning">
+                        This feature is available from the Starter plan ($15/month).
+                      </Text>
+                    </InlineStack>
+                    <Button plain monochrome url="#">Upgrade now</Button> {/* Replace # with actual upgrade URL */}
+                  </BlockStack>
+                </Card>
+
+              </BlockStack>
+            )}
           </BlockStack>
         );
       case 2: // Design tab
