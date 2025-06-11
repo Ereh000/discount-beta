@@ -15,7 +15,8 @@ import {
   ColorPicker,
   Popover,
   Tabs,
-  ButtonGroup
+  ButtonGroup,
+  LegacyCard
 } from "@shopify/polaris";
 import {
   AlertCircleIcon,
@@ -25,7 +26,9 @@ import {
 } from "@shopify/polaris-icons";
 
 export default function VolumeSettings() {
-  const [selected, setSelected] = useState(0);
+
+  // Block Tab State & Handlers
+  const [selected, setSelected] = useState(0); // This state controls the active tab, so it's related to the overall structure but can be kept here or moved to a general section. Keeping it here for now as it's the first state.
   const [bundleName, setBundleName] = useState("Bundle 1");
   const [visibility, setVisibility] = useState("all");
   const [headerText, setHeaderText] = useState("Choose your offer");
@@ -34,21 +37,13 @@ export default function VolumeSettings() {
   const [lineThickness, setLineThickness] = useState(2);
   const [publishOption, setPublishOption] = useState("immediately");
   const [template, setTemplate] = useState("prestige");
-  const [blockRadius, setBlockRadius] = useState(12);
-  const [blockThickness, setBlockThickness] = useState(2);
-  const [topSpacing, setTopSpacing] = useState(10);
-  const [bottomSpacing, setBottomSpacing] = useState(10);
-  const [radioDisplay, setRadioDisplay] = useState("show");
-  const [enableSwatchColors, setEnableSwatchColors] = useState(true);
-  const [swatchColors, setSwatchColors] = useState([
-    { color: { hue: 300, brightness: 1, saturation: 0.7 } },
-    { color: { hue: 50, brightness: 1, saturation: 0.7 } },
-    { color: { hue: 120, brightness: 1, saturation: 0.7 } },
-  ]);
-  const [popoverActive, setPopoverActive] = useState(false);
-  const [colorPickerIndex, setColorPickerIndex] = useState(0);
 
-  // State for Offers tab
+  const handleTabChange = (selectedTabIndex) => {
+    setSelected(selectedTabIndex);
+  };
+
+
+  // Offer Tab State & Handlers
   const [offers, setOffers] = useState([
     {
       id: 1,
@@ -66,36 +61,6 @@ export default function VolumeSettings() {
   ]);
   const [activeOfferIndex, setActiveOfferIndex] = useState(0); // Index of the currently selected offer
 
-  const handleTabChange = (selectedTabIndex) => {
-    setSelected(selectedTabIndex);
-  };
-
-  const handleSwatchColorChange = (color) => {
-    const newSwatchColors = [...swatchColors];
-    newSwatchColors[colorPickerIndex] = { color };
-    setSwatchColors(newSwatchColors);
-  };
-
-  const togglePopoverActive = (index) => {
-    setColorPickerIndex(index);
-    setPopoverActive((popoverActive) => !popoverActive);
-  };
-
-  const handleAddSwatch = () => {
-    setSwatchColors([
-      ...swatchColors,
-      { color: { hue: 0, brightness: 1, saturation: 0.7 } },
-    ]);
-  };
-
-  const handleRemoveSwatch = (index) => {
-    const newSwatchColors = [...swatchColors];
-    newSwatchColors.splice(index, 1);
-    setSwatchColors(newSwatchColors);
-  };
-
-
-  // Handlers for Offers tab
   const handleOfferChange = (index, field, value) => {
     const newOffers = [...offers];
     newOffers[index][field] = value;
@@ -127,6 +92,50 @@ export default function VolumeSettings() {
       setActiveOfferIndex(Math.max(0, index - 1)); // Select the previous offer, or the first if deleting the first
     }
   };
+
+
+  // Design Tab State & Handlers
+  const [blockRadius, setBlockRadius] = useState(12);
+  const [blockThickness, setBlockThickness] = useState(2);
+  const [topSpacing, setTopSpacing] = useState(10);
+  const [bottomSpacing, setBottomSpacing] = useState(10);
+  const [radioDisplay, setRadioDisplay] = useState("show");
+  const [enableSwatchColors, setEnableSwatchColors] = useState(true);
+  const [swatchColors, setSwatchColors] = useState([
+    { color: { hue: 300, brightness: 1, saturation: 0.7 } },
+    { color: { hue: 50, brightness: 1, saturation: 0.7 } },
+    { color: { hue: 120, brightness: 1, saturation: 0.7 } },
+  ]);
+  const [popoverActive, setPopoverActive] = useState(false);
+  const [colorPickerIndex, setColorPickerIndex] = useState(0);
+
+  const handleSwatchColorChange = (color) => {
+    const newSwatchColors = [...swatchColors];
+    newSwatchColors[colorPickerIndex] = { color };
+    setSwatchColors(newSwatchColors);
+  };
+
+  const togglePopoverActive = (index) => {
+    setColorPickerIndex(index);
+    setPopoverActive((popoverActive) => !popoverActive);
+  };
+
+  const handleAddSwatch = () => {
+    setSwatchColors([
+      ...swatchColors,
+      { color: { hue: 0, brightness: 1, saturation: 0.7 } },
+    ]);
+  };
+
+  const handleRemoveSwatch = (index) => {
+    const newSwatchColors = [...swatchColors];
+    newSwatchColors.splice(index, 1);
+    setSwatchColors(newSwatchColors);
+  };
+
+
+  // Advanced Settings Tab State & Handlers
+
 
   const tabs = [
     {
@@ -483,6 +492,7 @@ export default function VolumeSettings() {
               <Button fullWidth>See more templates</Button>
             </BlockStack>
 
+
             <BlockStack>
               <InlineStack align="space-between">
                 <Text variant="headingMd">Shape</Text>
@@ -601,80 +611,6 @@ export default function VolumeSettings() {
                 name="radio-display"
                 onChange={() => setRadioDisplay("hide")}
               />
-            </BlockStack>
-
-            <BlockStack>
-              <InlineStack gap="2" align="start">
-                <Text variant="headingMd">Swatch Colors</Text>
-                <Tooltip content="Colors for product variants">
-                  <Icon source={QuestionCircleIcon} color="base" />
-                </Tooltip>
-              </InlineStack>
-
-              <Checkbox
-                label="Enable Swatch Colors"
-                checked={enableSwatchColors}
-                onChange={setEnableSwatchColors}
-              />
-
-              {enableSwatchColors && (
-                <BlockStack>
-                  <InlineStack gap="2" wrap={false}>
-                    {swatchColors.map((swatch, index) => (
-                      <div key={index} style={{ position: "relative" }}>
-                        <div
-                          onClick={() => togglePopoverActive(index)}
-                          style={{
-                            width: "30px",
-                            height: "30px",
-                            borderRadius: "50%",
-                            background: `hsl(${swatch.color.hue}, ${swatch.color.saturation * 100}%, ${swatch.color.brightness * 50}%)`,
-                            cursor: "pointer",
-                            border: "1px solid #ddd",
-                          }}
-                        />
-                        {index > 2 && (
-                          <Button
-                            plain
-                            icon={DeleteIcon}
-                            onClick={() => handleRemoveSwatch(index)}
-                            accessibilityLabel="Remove color"
-                            style={{
-                              position: "absolute",
-                              top: "-8px",
-                              right: "-8px",
-                              padding: "2px",
-                              background: "white",
-                              borderRadius: "50%",
-                              boxShadow: "0 0 2px rgba(0,0,0,0.2)",
-                            }}
-                          />
-                        )}
-                      </div>
-                    ))}
-                    <Button icon={PlusIcon} onClick={handleAddSwatch}>
-                      Add Swatch
-                    </Button>
-                  </InlineStack>
-
-                  {popoverActive && (
-                    <Popover
-                      active={popoverActive}
-                      activator={<div></div>}
-                      onClose={() => setPopoverActive(false)}
-                    >
-                      <div style={{ padding: "12px" }}>
-                        <ColorPicker
-                          onChange={handleSwatchColorChange}
-                          color={swatchColors[colorPickerIndex].color}
-                        />
-                      </div>
-                    </Popover>
-                  )}
-
-                  <Button fullWidth>Add Swatches</Button>
-                </BlockStack>
-              )}
             </BlockStack>
           </BlockStack>
         );
@@ -856,10 +792,30 @@ export default function VolumeSettings() {
         );
       case 2: // Design tab
         return (
-          <BlockStack>
-            <Text variant="headingMd">Design settings content</Text>
-            <Text>Customize the appearance of your volume discount</Text>
-          </BlockStack>
+          <DesignSettingsContent
+            blockRadius={blockRadius}
+            setBlockRadius={setBlockRadius}
+            blockThickness={blockThickness}
+            setBlockThickness={setBlockThickness}
+            topSpacing={topSpacing}
+            setTopSpacing={setTopSpacing}
+            bottomSpacing={bottomSpacing}
+            setBottomSpacing={setBottomSpacing}
+            radioDisplay={radioDisplay}
+            setRadioDisplay={setRadioDisplay}
+            enableSwatchColors={enableSwatchColors}
+            setEnableSwatchColors={setEnableSwatchColors}
+            swatchColors={swatchColors}
+            setSwatchColors={setSwatchColors}
+            popoverActive={popoverActive}
+            setPopoverActive={setPopoverActive}
+            colorPickerIndex={colorPickerIndex}
+            setColorPickerIndex={setColorPickerIndex}
+            handleSwatchColorChange={handleSwatchColorChange}
+            togglePopoverActive={togglePopoverActive}
+            handleAddSwatch={handleAddSwatch}
+            handleRemoveSwatch={handleRemoveSwatch}
+          />
         );
       case 3: // Advanced settings tab
         return (
@@ -874,10 +830,109 @@ export default function VolumeSettings() {
   };
 
   return (
-    <Card>
-      <Tabs tabs={tabs} selected={selected} onSelect={handleTabChange}>
-        {renderTabContent()}
-      </Tabs>
-    </Card>
+    <>
+      <LegacyCard>
+        <div className="" style={{ paddingTop: '10px' }}>
+          <Tabs tabs={tabs} selected={selected} onSelect={handleTabChange}>
+            {/* {renderTabContent()} */}
+            <LegacyCard.Section>
+              {renderTabContent()}
+            </LegacyCard.Section>
+          </Tabs>
+        </div>
+      </LegacyCard>
+    </>
+  );
+}
+
+
+// New component for Design Settings
+function DesignSettingsContent({
+  blockRadius,
+  setBlockRadius,
+  blockThickness,
+  setBlockThickness,
+  topSpacing,
+  setTopSpacing,
+  bottomSpacing,
+  setBottomSpacing,
+  radioDisplay,
+  setRadioDisplay,
+  enableSwatchColors,
+  setEnableSwatchColors,
+  swatchColors,
+  setSwatchColors,
+  popoverActive,
+  setPopoverActive,
+  colorPickerIndex,
+  setColorPickerIndex,
+  handleSwatchColorChange,
+  togglePopoverActive,
+  handleAddSwatch,
+  handleRemoveSwatch,
+}) {
+  return (
+    <BlockStack gap="400">
+
+      <BlockStack>
+        <InlineStack gap="2" align="start">
+          <Text variant="headingMd">Swatch Colors</Text>
+          <Tooltip content="Colors for product variants">
+            <Icon source={QuestionCircleIcon} color="base" />
+          </Tooltip>
+        </InlineStack>
+
+        <Checkbox
+          label="Enable Swatch Colors"
+          checked={enableSwatchColors}
+          onChange={setEnableSwatchColors}
+        />
+
+        {enableSwatchColors && (
+          <BlockStack>
+            <InlineStack gap="2" wrap={false}>
+              {swatchColors.map((swatch, index) => (
+                <div key={index}>
+                  <Popover
+                    active={popoverActive && colorPickerIndex === index}
+                    activator={
+                      <div
+                        style={{
+                          width: "30px",
+                          height: "30px",
+                          borderRadius: "50%",
+                          backgroundColor: `hsl(${swatch.color.hue}, ${swatch.color.saturation * 100}%, ${swatch.color.brightness * 100}%)`,
+                          border: "1px solid #ccc",
+                          cursor: "pointer",
+                        }}
+                        onClick={() => togglePopoverActive(index)}
+                      />
+                    }
+                    onClose={() => setPopoverActive(false)}
+                    autofocusTarget="first-node"
+                  >
+                    <Popover.Section>
+                      <ColorPicker
+                        onChange={handleSwatchColorChange}
+                        color={swatch.color}
+                      />
+                    </Popover.Section>
+                  </Popover>
+                  {swatchColors.length > 1 && (
+                    <Button
+                      plain
+                      monochrome
+                      icon={DeleteIcon}
+                      onClick={() => handleRemoveSwatch(index)}
+                    />
+                  )}
+                </div>
+              ))}
+              <Button plain monochrome icon={PlusIcon} onClick={handleAddSwatch} />
+            </InlineStack>
+          </BlockStack>
+        )}
+      </BlockStack>
+    </BlockStack>
   );
 }
