@@ -3,73 +3,103 @@ import React from 'react'
 import { useCallback } from 'react';
 import { useState } from 'react'
 
-function BlockSettings({ onSendData }) {
+function BlockSettings() {
 
     // Bundle Name
-
     const [bundleName, setBundleName] = useState('Bundle 1')
 
-    // Visibility Settings
+    // Refactored State Objects
+    const [visibilitySettings, setVisibilitySettings] = useState({
+        visibility: 'all_products',
+    });
 
-    const [visibility, setVisibility] = useState('all_products'); // State for visibility
-    const handleVisibilityChange = useCallback((value) => setVisibility(value), []); // Handler for visibility change
-    const visibilityOptions = [ // Options for visibility select
+    const [headerSettings, setHeaderSettings] = useState({
+        headerText: 'Choose your offer',
+        alignment: 'center',
+        headerLine: true,
+        lineThickness: 2,
+    });
+
+    const [shapeSettings, setShapeSettings] = useState({
+        blockRadius: 12,
+        blockThickness: 2,
+    });
+
+    const [spacingSettings, setSpacingSettings] = useState({
+        spacingTop: 10,
+        spacingBottom: 10,
+    });
+
+    const [checkmarkSettings, setCheckmarkSettings] = useState({
+        checkmarkVisibility: 'show',
+    });
+
+
+    // Handlers updated to modify state objects
+    const handleVisibilityChange = useCallback((value) => {
+        setVisibilitySettings(prevSettings => ({ ...prevSettings, visibility: value }));
+    }, []);
+
+    const handleHeaderTextChange = useCallback((value) => {
+        setHeaderSettings(prevSettings => ({ ...prevSettings, headerText: value })); 
+    }, []);
+
+    const handleAlignmentChange = useCallback((value) => {
+        setHeaderSettings(prevSettings => ({ ...prevSettings, alignment: value }));
+    }, []);
+
+    const handleHeaderLineChange = useCallback((value) => {
+        setHeaderSettings(prevSettings => ({ ...prevSettings, headerLine: value }));
+    }, []);
+
+    const handleLineThicknessChange = useCallback((value) => {
+        setHeaderSettings(prevSettings => ({ ...prevSettings, lineThickness: value }));
+    }, []);
+
+    const handleBlockRadiusChange = useCallback((value) => {
+        setShapeSettings(prevSettings => ({ ...prevSettings, blockRadius: value }));
+    }, []);
+
+    const handleBlockThicknessChange = useCallback((value) => {
+        setShapeSettings(prevSettings => ({ ...prevSettings, blockThickness: value }));
+    }, []);
+
+    const handleSpacingTopChange = useCallback((value) => {
+        setSpacingSettings(prevSettings => ({ ...prevSettings, spacingTop: value }));
+    }, []);
+
+    const handleSpacingBottomChange = useCallback((value) => {
+        setSpacingSettings(prevSettings => ({ ...prevSettings, spacingBottom: value }));
+    }, []);
+
+    const handleCheckmarkVisibilityChange = useCallback((_checked, value) => {
+        setCheckmarkSettings(prevSettings => ({ ...prevSettings, checkmarkVisibility: value }));
+    }, []);
+
+
+    // Options remain the same
+    const visibilityOptions = [
         { label: 'All products', value: 'all_products' },
         { label: 'Specific products', value: 'specific_products' },
         { label: 'Specific collections', value: 'specific_collections' },
     ];
 
-    // Header Settings
-
-    const [headerText, setHeaderText] = useState('Choose your offer'); // State for header text
-    const handleHeaderTextChange = useCallback((value) => setHeaderText(value), []); // Handler for header text change
-
-    const [alignment, setAlignment] = useState('center'); // State for alignment
-    const handleAlignmentChange = useCallback((value) => setAlignment(value), []); // Handler for alignment change
-    const alignmentOptions = [ // Options for alignment select
+    const alignmentOptions = [
         { label: 'Left', value: 'left' },
         { label: 'Center', value: 'center' },
         { label: 'Right', value: 'right' },
     ];
 
-    const [headerLine, setHeaderLine] = useState(true); // State for header line checkbox
-    const handleHeaderLineChange = useCallback((value) => setHeaderLine(value), []); // Handler for header line change
-
-    const [lineThickness, setLineThickness] = useState(2); // State for line thickness slider
-    const handleLineThicknessChange = useCallback((value) => setLineThickness(value), []); // Handler for line thickness change
-
-
-    // Shape Settings 
-
-    const [blockRadius, setBlockRadius] = useState(12); // State for block radius
-    const handleBlockRadiusChange = useCallback((value) => setBlockRadius(value), []); // Handler for block radius change
-
-    const [blockThickness, setBlockThickness] = useState(2); // State for block thickness
-    const handleBlockThicknessChange = useCallback((value) => setBlockThickness(value), []); // Handler for block thickness change
-
-    const [spacingTop, setSpacingTop] = useState(10); // State for spacing top
-    const handleSpacingTopChange = useCallback((value) => setSpacingTop(value), []); // Handler for spacing top change
-
-    const [spacingBottom, setSpacingBottom] = useState(10); // State for spacing bottom
-    const handleSpacingBottomChange = useCallback((value) => setSpacingBottom(value), []); // Handler for spacing bottom change
-
-    const [checkmarkVisibility, setCheckmarkVisibility] = useState('show'); // State for checkmark visibility
-    const handleCheckmarkVisibilityChange = useCallback((_checked, value) => setCheckmarkVisibility(value), []); // Handler for checkmark visibility change
-
-    // All Settings in one object
-    const allSettings = {
+    // All Settings in one object (combining the state objects)
+    const allBlockSettings = {
         bundleName,
-        visibility,
-        headerText,
-        alignment,
-        headerLine,
-        lineThickness,
-        blockRadius,
-        blockThickness,
-        spacingTop,
-        spacingBottom,
-        checkmarkVisibility,
+        ...visibilitySettings,
+        ...headerSettings,
+        ...shapeSettings,
+        ...spacingSettings,
+        ...checkmarkSettings,
     };
+    // console.log("allBlockSettings:", allBlockSettings);
 
     return (
         <div>
@@ -88,7 +118,7 @@ function BlockSettings({ onSendData }) {
                         label="Visibility" // Label is handled by the Text component above
                         options={visibilityOptions}
                         onChange={handleVisibilityChange}
-                        value={visibility}
+                        value={visibilitySettings.visibility} // Read from state object
                     />
                 </Card>
 
@@ -99,7 +129,7 @@ function BlockSettings({ onSendData }) {
                             <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 6, xl: 6 }}> {/* Adjust column span as needed */}
                                 <TextField
                                     label="Header Text"
-                                    value={headerText}
+                                    value={headerSettings.headerText} // Read from state object
                                     onChange={handleHeaderTextChange}
                                 />
                             </Grid.Cell>
@@ -108,7 +138,7 @@ function BlockSettings({ onSendData }) {
                                     label="Alignment"
                                     options={alignmentOptions}
                                     onChange={handleAlignmentChange}
-                                    value={alignment}
+                                    value={headerSettings.alignment} // Read from state object
                                 />
                             </Grid.Cell>
                         </Grid>
@@ -116,14 +146,14 @@ function BlockSettings({ onSendData }) {
                             <Text fontWeight="bold">Header line</Text>
                             <Checkbox
                                 label="Add a line to the header title"
-                                checked={headerLine}
+                                checked={headerSettings.headerLine} // Read from state object
                                 onChange={handleHeaderLineChange}
                             />
                         </BlockStack>
-                        {headerLine && ( // Conditionally render line thickness if header line is checked
+                        {headerSettings.headerLine && ( // Conditionally render based on state object
                             <RangeSlider
                                 label="Line thickness"
-                                value={lineThickness}
+                                value={headerSettings.lineThickness} // Read from state object
                                 onChange={handleLineThicknessChange}
                                 min={0}
                                 max={10} // Adjust max value as needed
@@ -143,7 +173,7 @@ function BlockSettings({ onSendData }) {
                                 <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 6, xl: 6 }}>
                                     <RangeSlider
                                         label="Block radius"
-                                        value={blockRadius}
+                                        value={shapeSettings.blockRadius} // Read from state object
                                         onChange={handleBlockRadiusChange}
                                         min={0}
                                         max={20} // Adjust max value as needed
@@ -153,7 +183,7 @@ function BlockSettings({ onSendData }) {
                                 <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 6, xl: 6 }}>
                                     <RangeSlider
                                         label="Block Thickness"
-                                        value={blockThickness}
+                                        value={shapeSettings.blockThickness} // Read from state object
                                         onChange={handleBlockThicknessChange}
                                         min={0}
                                         max={10} // Adjust max value as needed
@@ -170,7 +200,7 @@ function BlockSettings({ onSendData }) {
                                 <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 6, xl: 6 }}>
                                     <RangeSlider
                                         label="Top"
-                                        value={spacingTop}
+                                        value={spacingSettings.spacingTop} // Read from state object
                                         onChange={handleSpacingTopChange}
                                         min={0}
                                         max={30} // Adjust max value as needed
@@ -180,7 +210,7 @@ function BlockSettings({ onSendData }) {
                                 <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 6, xl: 6 }}>
                                     <RangeSlider
                                         label="Bottom"
-                                        value={spacingBottom}
+                                        value={spacingSettings.spacingBottom} // Read from state object
                                         onChange={handleSpacingBottomChange}
                                         min={0}
                                         max={30} // Adjust max value as needed
@@ -196,7 +226,7 @@ function BlockSettings({ onSendData }) {
                             <BlockStack gap={200} direction="horizontal"> {/* Use horizontal BlockStack for radio buttons */}
                                 <RadioButton
                                     label="Show radio"
-                                    checked={checkmarkVisibility === 'show'}
+                                    checked={checkmarkSettings.checkmarkVisibility === 'show'} // Read from state object
                                     id="showRadio"
                                     name="checkmarkVisibility"
                                     onChange={handleCheckmarkVisibilityChange}
@@ -204,7 +234,7 @@ function BlockSettings({ onSendData }) {
                                 />
                                 <RadioButton
                                     label="Hide radio"
-                                    checked={checkmarkVisibility === 'hide'}
+                                    checked={checkmarkSettings.checkmarkVisibility === 'hide'} // Read from state object
                                     id="hideRadio"
                                     name="checkmarkVisibility"
                                     onChange={handleCheckmarkVisibilityChange}

@@ -1,6 +1,8 @@
 import React, { useState, useCallback } from 'react'; // Import useState and useCallback
 import { BlockStack, Card, LegacyCard, Tabs } from '@shopify/polaris'; // Import Tabs component
 import BlockSettings from './Settings/BlockSettings';
+import OfferSettings from './Settings/OfferSettings';
+import DesignSettings from './Settings/DesignSettings';
 
 export default function VolumeSettings() {
   // Define the tabs
@@ -43,6 +45,8 @@ export default function VolumeSettings() {
 
   const handleBundleData = (data) => {
     setAllBlockSettings(data);
+    console.log("data", data)
+    // console.log("allBlockSettings", allBlockSettings)
   };
 
   return (
@@ -57,8 +61,8 @@ export default function VolumeSettings() {
         </LegacyCard>
 
         {selected === 0 && <div><BlockSettings onSendData={handleBundleData} /></div>}
-        {selected === 1 && <div>Offers Settings Content</div>}
-        {selected === 2 && <div>Design Settings Content</div>}
+        {selected === 1 && <div><OfferSettings/></div>}
+        {selected === 2 && <div><DesignSettings/></div>}
         {selected === 3 && <div>Advanced Settings Content</div>}
       </BlockStack>
     </>
