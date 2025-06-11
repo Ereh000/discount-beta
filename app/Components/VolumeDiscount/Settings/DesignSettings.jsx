@@ -31,27 +31,27 @@ function ColorSettingItem({ label, color, onChange, settingKey, openColorPickerF
     };
 
     return (
-        <div style={{display: 'flex', alignItems:'center', gap: '7px', lineHeight: 1.3}}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '7px', lineHeight: 1.3 }}>
             {/* <InlineStack blockAlign="center" gap={200}> */}
-                <Popover
-                    active={openColorPickerFor === settingKey}
-                    activator={
-                        <div style={swatchStyle} onClick={() => onSwatchClick(settingKey)}>
-                            {color.alpha < 1 && <div style={checkerboardStyle}></div>}
-                        </div>
-                    }
-                    onClose={onClosePicker}
-                    preferredAlignment="left"
-                >
-                    <div style={{ width: '220px', padding: '1.6rem' }}>
-                        <ColorPicker
-                            onChange={onChange}
-                            color={color}
-                            allowAlpha
-                        />
+            <Popover
+                active={openColorPickerFor === settingKey}
+                activator={
+                    <div style={swatchStyle} onClick={() => onSwatchClick(settingKey)}>
+                        {color.alpha < 1 && <div style={checkerboardStyle}></div>}
                     </div>
-                </Popover>
-                <p style={{ wordBreak: "" }}>{label}</p>
+                }
+                onClose={onClosePicker}
+                preferredAlignment="left"
+            >
+                <div style={{ width: '220px', padding: '1.6rem' }}>
+                    <ColorPicker
+                        onChange={onChange}
+                        color={color}
+                        allowAlpha
+                    />
+                </div>
+            </Popover>
+            <p style={{ wordBreak: "" }}>{label}</p>
             {/* </InlineStack> */}
         </div>
     );
@@ -110,10 +110,8 @@ function DesignSettings() {
     return (
         <div>
             <BlockStack gap={400}>
+                {/* Color Settings Card */}
                 <Card>
-
-
-                    {/* Color Settings Card */}
                     <BlockStack gap={400}>
                         {/* Volume Discount Colors Header */}
                         <Text variant="headingMd" as="h2">Volume discount colors</Text>
@@ -294,6 +292,10 @@ function DesignSettings() {
                         </BlockStack>
                     </BlockStack>
                 </Card>
+
+                {/* Typography Settings Card */}
+                
+
             </BlockStack>
         </div>
     );
