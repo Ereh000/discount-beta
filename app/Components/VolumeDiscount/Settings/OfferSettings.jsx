@@ -1,33 +1,13 @@
 import { BlockStack, Card, Text, Tabs, Button, TextField, Grid, Select, RadioButton, Checkbox, Banner, Icon, Tooltip, Badge, InlineStack } from '@shopify/polaris'; // Import necessary components
-import { QuestionCircleIcon, DeleteIcon, ImageIcon, GiftCardIcon, PlusCircleIcon } from '@shopify/polaris-icons'; // Import icons
-import React, { useState, useCallback } from 'react'; // Import useState and useCallback
-import { useEffect } from 'react';
+import { DeleteIcon, ImageIcon, PlusCircleIcon } from '@shopify/polaris-icons'; // Import icons, added DynamicSourceIcon
+import React, { useCallback } from 'react'; // Import useState and useCallback
 
-function OfferSettings({ offerSettingsOnChange,
+function OfferSettings({
     offers,
     setOffers,
     selectedOfferIndex,
-    setSelectedOfferIndex, }) {
-    // // State to manage the offers
-    // const [offers, setOffers] = useState([
-    //     {
-    //         id: 'offer-1',
-    //         title: 'Single',
-    //         subtitle: 'Standard price',
-    //         quantity: '1',
-    //         image: null, // Placeholder for image
-    //         priceType: 'default', // 'default' or 'buy_get'
-    //         buyQuantity: '1',
-    //         getQuantity: '1',
-    //         highlight: false,
-    //         selectedByDefault: true,
-    //         tag: '',
-    //     },
-    //     // Add more offers here if needed
-    // ]);
-
-    // // State to manage the selected offer tab
-    // const [selectedOfferIndex, setSelectedOfferIndex] = useState(0);
+    setSelectedOfferIndex,
+}) {
 
     // Handler for changing offer tab
     const handleOfferTabChange = useCallback(
@@ -50,6 +30,14 @@ function OfferSettings({ offerSettingsOnChange,
             highlight: false,
             selectedByDefault: false,
             tag: '',
+            // Add default highlight settings
+            highlightSettings: {
+                type: 'text', // Default to 'text'
+                text: 'MOST POPULAR', // Default text
+                blinking: false,
+                style: 'pill', // Default style
+                shape: 'rounded', // Default shape
+            }
         };
         setOffers([...offers, newOffer]);
         setSelectedOfferIndex(offers.length); // Select the new offer
@@ -71,6 +59,18 @@ function OfferSettings({ offerSettingsOnChange,
     const handleOfferSettingChange = useCallback((setting, value) => {
         setOffers(offers.map((offer, index) => {
             if (index === selectedOfferIndex) {
+                // Handle nested highlight settings
+                if (setting.startsWith('highlightSettings.')) {
+                    const [_, highlightSetting] = setting.split('.');
+                    return {
+                        ...offer,
+                        highlightSettings: {
+                            ...offer.highlightSettings,
+                            [highlightSetting]: value,
+                        }
+                    };
+                }
+                // Handle top-level settings
                 return { ...offer, [setting]: value };
             }
             return offer;
@@ -81,6 +81,20 @@ function OfferSettings({ offerSettingsOnChange,
     const priceOptions = [
         { label: 'Default', value: 'default' },
         // Add other price options if needed
+    ];
+
+    // Options for Highlight Style Select
+    const highlightStyleOptions = [
+        { label: 'Pill', value: 'pill' },
+        { label: 'Rectangle', value: 'rectangle' },
+        // Add other styles if needed
+    ];
+
+    // Options for Highlight Shape Select
+    const highlightShapeOptions = [
+        { label: 'Rounded', value: 'rounded' },
+        { label: 'Square', value: 'square' },
+        // Add other shapes if needed
     ];
 
     // Get the currently selected offer
@@ -94,12 +108,28 @@ function OfferSettings({ offerSettingsOnChange,
         // You might add a delete action here if needed, but the image shows a delete button next to the offer title
     }));
 
-    // Effect to call the parent callback whenever offers change
-    useEffect(() => {
-        if (offerSettingsOnChange) {
-            offerSettingsOnChange(offers);
-        }
-    }, [offers, offerSettingsOnChange])
+    // Tabs for Highlight settings (Text/Timer)
+    const highlightTabs = [
+        {
+            id: 'highlight-text',
+            content: 'Text',
+            panelID: 'highlight-text-content',
+        },
+        {
+            id: 'highlight-timer',
+            content: 'Timer',
+            panelID: 'highlight-timer-content',
+        },
+    ];
+
+    // Handler for changing highlight tab
+    const handleHighlightTabChange = useCallback(
+        (selectedTabIndex) => {
+            const type = highlightTabs[selectedTabIndex].id.replace('highlight-', '');
+            handleOfferSettingChange('highlightSettings.type', type);
+        },
+        [handleOfferSettingChange, highlightTabs],
+    );
 
 
     return (
@@ -236,6 +266,63 @@ function OfferSettings({ offerSettingsOnChange,
                                 checked={currentOffer.highlight}
                                 onChange={(value) => handleOfferSettingChange('highlight', value)}
                             />
+
+                            {/* Conditional rendering for highlight settings */}
+                            {currentOffer.highlight && (
+                                <BlockStack>
+                                    {/* Text/Timer Tabs */}
+                                    <Tabs
+                                        tabs={highlightTabs}
+                                        selected={highlightTabs.findIndex(tab => tab.id === `highlight-${currentOffer.highlightSettings?.type || 'text'}`)}
+                                        onSelect={handleHighlightTabChange}
+                                    >
+
+                                        <div className="" style={{paddingLeft: '12px'}}>
+                                            {/* Highlight Text Settings */}
+                                            {currentOffer.highlightSettings?.type === 'text' && (
+                                                <BlockStack>
+                                                    <TextField
+                                                        label="Title"
+                                                        value={currentOffer.highlightSettings?.text || ''}
+                                                        onChange={(value) => handleOfferSettingChange('highlightSettings.text', value)}
+                                                    // connectedRight={<Icon source={DynamicSourceIcon} />} // Dynamic content icon
+                                                    />
+                                                    <Checkbox
+                                                        label="Blinking"
+                                                        checked={currentOffer.highlightSettings?.blinking || false}
+                                                        onChange={(value) => handleOfferSettingChange('highlightSettings.blinking', value)}
+                                                    />
+                                                    <Grid>
+                                                        <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 6, xl: 6 }}>
+                                                            <Select
+                                                                label="Style"
+                                                                options={highlightStyleOptions}
+                                                                onChange={(value) => handleOfferSettingChange('highlightSettings.style', value)}
+                                                                value={currentOffer.highlightSettings?.style || 'pill'}
+                                                            />
+                                                        </Grid.Cell>
+                                                        <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 6, xl: 6 }}>
+                                                            <Select
+                                                                label="Shape"
+                                                                options={highlightShapeOptions}
+                                                                onChange={(value) => handleOfferSettingChange('highlightSettings.shape', value)}
+                                                                value={currentOffer.highlightSettings?.shape || 'rounded'}
+                                                            />
+                                                        </Grid.Cell>
+                                                    </Grid>
+                                                </BlockStack>
+                                            )}
+
+                                            {/* Highlight Timer Settings (Placeholder) */}
+                                            {currentOffer.highlightSettings?.type === 'timer' && (
+                                                <BlockStack gap={200}>
+                                                    <Banner status="info">Timer settings would go here.</Banner>
+                                                </BlockStack>
+                                            )}
+                                        </div>
+                                    </Tabs>
+                                </BlockStack>
+                            )}
                         </BlockStack>
 
                         {/* Selected by default */}

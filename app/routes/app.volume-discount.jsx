@@ -3,7 +3,6 @@ import React from "react";
 import VolumeSettings from "../Components/VolumeDiscount/VolumeSettings";
 import VolumePreview from "../Components/VolumeDiscount/VolumePreview";
 import { useState } from "react";
-import { useCallback } from "react";
 
 function MainVolumeDiscount() {
 
@@ -56,13 +55,114 @@ function MainVolumeDiscount() {
       highlight: false,
       selectedByDefault: true,
       tag: '',
+      highlightSettings: {
+        type: 'text',
+        text: 'MOST POPULAR',
+        blinking: false,
+        style: 'pill',
+        shape: 'rounded',
+      }
     },
     // Add more offers here if needed
+    {
+      id: 'offer-2',
+      title: 'Double',
+      subtitle: 'You save 10% off',
+      quantity: '2',
+      image: null, // Placeholder for image
+      priceType: 'default', // 'default' or 'buy_get'
+      buyQuantity: '1',
+      getQuantity: '1',
+      highlight: false,
+      selectedByDefault: true,
+      tag: '',
+      highlightSettings: {
+        type: 'text',
+        text: 'MOST POPULAR',
+        blinking: false,
+        style: 'pill',
+        shape: 'rounded',
+      }
+    },
+    {
+      id: 'offer-3',
+      title: 'Triple',
+      subtitle: 'You save 20% off',
+      quantity: '3',
+      image: null, // Placeholder for image
+      priceType: 'default', // 'default' or 'buy_get'
+      buyQuantity: '1',
+      getQuantity: '1',
+      highlight: true,
+      selectedByDefault: true,
+      tag: '',
+      highlightSettings: {
+        type: 'text',
+        text: 'MOST POPULAR',
+        blinking: false,
+        style: 'pill',
+        shape: 'rounded',
+      }
+    },
   ]);
   // State to manage the selected offer tab
   const [selectedOfferIndex, setSelectedOfferIndex] = useState(0);
 
-  // End Offer Settings States
+  // End Offer Settings States ------------------------------------------------------------------------
+
+  // Design Tab States -------------------------------------------------------------------------
+
+  // State for Background Colors - Initialized with RGBA values
+  const [backgroundColors, setBackgroundColors] = useState({
+    bundle: { red: 230, green: 230, blue: 230, alpha: 0.5 }, // Example initial transparent grey (converted from HSB)
+    border: { red: 128, green: 128, blue: 128, alpha: 1 }, // Example initial grey (converted from HSB)
+    checkmark: { red: 0, green: 0, blue: 0, alpha: 1 }, // Example initial black (converted from HSB)
+    highlight: { red: 0, green: 0, blue: 0, alpha: 1 }, // Example initial black (converted from HSB)
+    selectedBundle: { red: 255, green: 255, blue: 255, alpha: 1 }, // Example initial white (converted from HSB)
+    borderSelectedBundle: { red: 0, green: 0, blue: 0, alpha: 1 }, // Example initial black (converted from HSB)
+    tags: { red: 128, green: 128, blue: 128, alpha: 0.5 }, // Example initial transparent grey (converted from HSB)
+  });
+  // State for Pricing Colors - Initialized with RGBA values
+  const [pricingColors, setPricingColors] = useState({
+    price: { red: 0, green: 0, blue: 0, alpha: 1 }, // Example initial black (converted from HSB)
+    comparedPrice: { red: 255, green: 0, blue: 0, alpha: 1 }, // Example initial red (converted from HSB)
+  });
+  // State for Text Colors - Initialized with RGBA values
+  const [textColors, setTextColors] = useState({
+    header: { red: 0, green: 0, blue: 0, alpha: 1 }, // Example initial black (converted from HSB)
+    title: { red: 0, green: 0, blue: 0, alpha: 1 }, // Example initial black (converted from HSB)
+    subtitle: { red: 128, green: 128, blue: 128, alpha: 1 }, // Example initial grey (converted from HSB)
+    highlight: { red: 255, green: 255, blue: 255, alpha: 1 }, // Example initial white (converted from HSB)
+    tags: { red: 128, green: 128, blue: 128, alpha: 1 }, // Example initial grey (converted from HSB)
+  });
+  // State for Typography Settings
+  const [typographySettings, setTypographySettings] = useState({
+    header: { size: '16', fontStyle: 'Bold' },
+    titlePrice: { size: '16', fontStyle: 'Bold' },
+    subtitleComparedPrice: { size: '14', fontStyle: 'Regular' },
+    tagHighlight: { size: '12', fontStyle: 'Regular' },
+  });
+  // State to track which color picker is open
+  const [openColorPickerFor, setOpenColorPickerFor] = useState(null);
+
+  // End of Design Tab States --------------------------------------
+
+  // Advanced Tab States --------------------------------------
+
+  const [settings, setSettings] = useState({
+    variants: {
+      allowCustomerChoice: true,
+      hideThemeVariant: true,
+      hideOutOfStock: false,
+      hideThemePrice: true,
+    },
+    pricing: {
+      showPricesPerItem: false,
+      showCompareAtPrice: true,
+    }
+  });
+
+  // End of Advanced Tab States ----------------------------------------
 
   // All Volume Settings ------------------------------------------------------
 
@@ -77,7 +177,15 @@ function MainVolumeDiscount() {
     offerSettings: {
       offers: offers,
       selectedOfferIndex: selectedOfferIndex,
-    }
+    },
+    designSettings: {
+      backgroundColors: backgroundColors,
+      pricingColors, pricingColors,
+      textColors: textColors,
+      typographySettings: typographySettings,
+      openColorPickerFor: openColorPickerFor,
+    },
+    advancedSettings: settings,
   }
 
   console.log('allVolumeSettings', allVolumeSettings)
@@ -107,14 +215,30 @@ function MainVolumeDiscount() {
             setOffers={setOffers}
             selectedOfferIndex={selectedOfferIndex}
             setSelectedOfferIndex={setSelectedOfferIndex}
-          // End of Offer Tab Props
+            // End of Offer Tab Props
+
+            // Design Tab Props
+            backgroundColors={backgroundColors}
+            setBackgroundColors={setBackgroundColors}
+            pricingColors={pricingColors}
+            setPricingColors={setPricingColors}
+            textColors={textColors}
+            setTextColors={setTextColors}
+            typographySettings={typographySettings}
+            setTypographySettings={setTypographySettings}
+            openColorPickerFor={openColorPickerFor}
+            setOpenColorPickerFor={setOpenColorPickerFor}
+            // End of Design Tab Props
+
+            // Advanced Tab Props
+            advancedSettings={settings}
+            setAdvancedSettings={setSettings}
+          // End of Advanced Tab Props
           />
         </Grid.Cell>
 
         <Grid.Cell columnSpan={{ xs: 6, md: 6, lg: 6, xl: 6 }}>
-          <Card>
-            <VolumePreview />
-          </Card>
+          <VolumePreview allVolumeSettings={allVolumeSettings} />
         </Grid.Cell>
       </Grid>
       <br />

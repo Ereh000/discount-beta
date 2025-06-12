@@ -1,21 +1,8 @@
 import { BlockStack, Card, Text, Checkbox, InlineStack, Icon, Tooltip } from '@shopify/polaris';
 import { QuestionCircleIcon } from '@shopify/polaris-icons';
 import React, { useState } from 'react';
-import { useEffect } from 'react';
 
-function AdvancedSettings({ onSettingsChange }) {
-    const [settings, setSettings] = useState({
-        variants: {
-            allowCustomerChoice: true,
-            hideThemeVariant: true,
-            hideOutOfStock: false,
-            hideThemePrice: true,
-        },
-        pricing: {
-            showPricesPerItem: false,
-            showCompareAtPrice: true,
-        }
-    });
+function AdvancedSettings({ settings, setSettings }) {
 
     const handleSettingChange = (section, setting) => {
         setSettings(prev => ({
@@ -25,14 +12,7 @@ function AdvancedSettings({ onSettingsChange }) {
                 [setting]: !prev[section][setting]
             }
         }));
-    };
-
-    // Use useEffect to call the parent callback whenever settings change
-    useEffect(() => {
-        if (onSettingsChange) {
-            onSettingsChange(settings);
-        }
-    }, [settings, onSettingsChange]); // Depend on settings and the callback
+    }; 
 
     return (
         <BlockStack gap={400}>

@@ -1,7 +1,5 @@
 import { BlockStack, Card, Text, Grid, ColorPicker, Button, Popover, InlineStack, TextField, Select } from '@shopify/polaris'; // Import TextField and Select
 import React, { useState, useCallback } from 'react'; // Import useState and useCallback
-import { useRef } from 'react';
-import { useEffect } from 'react';
 
 // Helper function to convert HSB/HSV (Polaris format) to RGBA
 function hsvToRgba(hsvColor) {
@@ -132,44 +130,18 @@ function ColorSettingItem({ label, color, onChange, settingKey, openColorPickerF
 }
 
 
-function DesignSettings({ onSettingsChange }) {
-    // State for Background Colors - Initialized with RGBA values
-    const [backgroundColors, setBackgroundColors] = useState({
-        bundle: { red: 230, green: 230, blue: 230, alpha: 0.5 }, // Example initial transparent grey (converted from HSB)
-        border: { red: 128, green: 128, blue: 128, alpha: 1 }, // Example initial grey (converted from HSB)
-        checkmark: { red: 0, green: 0, blue: 0, alpha: 1 }, // Example initial black (converted from HSB)
-        highlight: { red: 0, green: 0, blue: 0, alpha: 1 }, // Example initial black (converted from HSB)
-        selectedBundle: { red: 255, green: 255, blue: 255, alpha: 1 }, // Example initial white (converted from HSB)
-        borderSelectedBundle: { red: 0, green: 0, blue: 0, alpha: 1 }, // Example initial black (converted from HSB)
-        tags: { red: 128, green: 128, blue: 128, alpha: 0.5 }, // Example initial transparent grey (converted from HSB)
-    });
-
-    // State for Pricing Colors - Initialized with RGBA values
-    const [pricingColors, setPricingColors] = useState({
-        price: { red: 0, green: 0, blue: 0, alpha: 1 }, // Example initial black (converted from HSB)
-        comparedPrice: { red: 255, green: 0, blue: 0, alpha: 1 }, // Example initial red (converted from HSB)
-    });
-
-    // State for Text Colors - Initialized with RGBA values
-    const [textColors, setTextColors] = useState({
-        header: { red: 0, green: 0, blue: 0, alpha: 1 }, // Example initial black (converted from HSB)
-        title: { red: 0, green: 0, blue: 0, alpha: 1 }, // Example initial black (converted from HSB)
-        subtitle: { red: 128, green: 128, blue: 128, alpha: 1 }, // Example initial grey (converted from HSB)
-        highlight: { red: 255, green: 255, blue: 255, alpha: 1 }, // Example initial white (converted from HSB)
-        tags: { red: 128, green: 128, blue: 128, alpha: 1 }, // Example initial grey (converted from HSB)
-    });
-
-    // State for Typography Settings
-    const [typographySettings, setTypographySettings] = useState({
-        header: { size: '16', fontStyle: 'Bold' },
-        titlePrice: { size: '16', fontStyle: 'Bold' },
-        subtitleComparedPrice: { size: '14', fontStyle: 'Regular' },
-        tagHighlight: { size: '12', fontStyle: 'Regular' },
-    });
-
-
-    // State to track which color picker is open
-    const [openColorPickerFor, setOpenColorPickerFor] = useState(null);
+function DesignSettings({
+    backgroundColors,
+    setBackgroundColors,
+    pricingColors,
+    setPricingColors,
+    textColors,
+    setTextColors,
+    typographySettings,
+    setTypographySettings,
+    openColorPickerFor,
+    setOpenColorPickerFor,
+}) {
 
     // Handlers for opening/closing popovers
     const handleSwatchClick = useCallback((settingKey) => setOpenColorPickerFor(settingKey), []);
@@ -207,22 +179,6 @@ function DesignSettings({ onSettingsChange }) {
         { label: 'Bold', value: 'Bold' },
         // Add other font styles if needed
     ];
-
-    // Sending states to Parent
-    // Use useEffect to call the parent callback whenever relevant settings change
-    useEffect(() => {
-        const combinedSettings = {
-            backgroundColors, // These are now RGBA
-            pricingColors,    // These are now RGBA
-            textColors,       // These are now RGBA
-            typographySettings,
-        };
-
-        // Call the parent callback with the combined settings
-        if (onSettingsChange) {
-            onSettingsChange(combinedSettings);
-        }
-    }, [backgroundColors, pricingColors, textColors, typographySettings, onSettingsChange]); // Depend on the relevant states and the callback
 
     return (
         <div>

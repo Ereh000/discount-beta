@@ -1,11 +1,8 @@
 import { BlockStack, Card, Checkbox, Grid, RadioButton, RangeSlider, Select, Text, TextField } from '@shopify/polaris'
 import React from 'react'
-import { useEffect } from 'react';
 import { useCallback } from 'react';
-import { useState } from 'react'
 
 function BlockSettings({
-    onBlockSettingsChange,
     // Block Tab Props
     bundleName,
     setBundleName,
@@ -21,36 +18,6 @@ function BlockSettings({
     setCheckmarkSettings,
     // End of Block Tab Props
 }) {
-
-    // // Bundle Name
-    // const [bundleName, setBundleName] = useState('Bundle 1')
-
-    // // Refactored State Objects
-    // const [visibilitySettings, setVisibilitySettings] = useState({
-    //     visibility: 'all_products',
-    // });
-
-    // const [headerSettings, setHeaderSettings] = useState({
-    //     headerText: 'Choose your offer',
-    //     alignment: 'center',
-    //     headerLine: true,
-    //     lineThickness: 2,
-    // });
-
-    // const [shapeSettings, setShapeSettings] = useState({
-    //     blockRadius: 12,
-    //     blockThickness: 2,
-    // });
-
-    // const [spacingSettings, setSpacingSettings] = useState({
-    //     spacingTop: 10,
-    //     spacingBottom: 10,
-    // });
-
-    // const [checkmarkSettings, setCheckmarkSettings] = useState({
-    //     checkmarkVisibility: 'show',
-    // });
-
 
     // Handlers updated to modify state objects
     const handleVisibilityChange = useCallback((value) => {
@@ -106,35 +73,6 @@ function BlockSettings({
         { label: 'Center', value: 'center' },
         { label: 'Right', value: 'right' },
     ];
-
-    // All Settings in one object (combining the state objects)
-    // const allBlockSettings = {
-    //     bundleName,
-    //     ...visibilitySettings,
-    //     ...headerSettings,
-    //     ...shapeSettings,
-    //     ...spacingSettings,
-    //     ...checkmarkSettings,
-    // };
-    // console.log("allBlockSettings:", allBlockSettings);
-
-    // Call the parent callback whenever settings change
-    // useEffect(() => {
-    //     if (onBlockSettingsChange) {
-    //         const allBlockSettings = {
-    //             bundleName,
-    //             visibilitySettings,
-    //             headerSettings,
-    //             shapeSettings,
-    //             spacingSettings,
-    //             checkmarkSettings,
-    //         }
-    //         onBlockSettingsChange(allBlockSettings);
-    //     }
-    // }, [
-    //     onBlockSettingsChange,
-    //     bundleName, visibilitySettings, headerSettings, shapeSettings, spacingSettings, checkmarkSettings
-    // ])
 
     return (
         <div>

@@ -577,7 +577,7 @@ export default function Dashboard() {
               </Text>
 
               <div style={{ marginTop: 'auto', paddingTop: '10px' }}>
-                <Button fullWidth variant='primary'>Create the deal</Button>
+                <Button fullWidth url='/app/volume-discount' variant='primary'>Create the deal</Button>
               </div>
             </div>
           </div>
