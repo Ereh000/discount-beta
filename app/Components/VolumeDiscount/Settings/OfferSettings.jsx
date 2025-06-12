@@ -1,28 +1,33 @@
 import { BlockStack, Card, Text, Tabs, Button, TextField, Grid, Select, RadioButton, Checkbox, Banner, Icon, Tooltip, Badge, InlineStack } from '@shopify/polaris'; // Import necessary components
 import { QuestionCircleIcon, DeleteIcon, ImageIcon, GiftCardIcon, PlusCircleIcon } from '@shopify/polaris-icons'; // Import icons
 import React, { useState, useCallback } from 'react'; // Import useState and useCallback
+import { useEffect } from 'react';
 
-function OfferSettings() {
-    // State to manage the offers
-    const [offers, setOffers] = useState([
-        {
-            id: 'offer-1',
-            title: 'Single',
-            subtitle: 'Standard price',
-            quantity: '1',
-            image: null, // Placeholder for image
-            priceType: 'default', // 'default' or 'buy_get'
-            buyQuantity: '1',
-            getQuantity: '1',
-            highlight: false,
-            selectedByDefault: true,
-            tag: '',
-        },
-        // Add more offers here if needed
-    ]);
+function OfferSettings({ offerSettingsOnChange,
+    offers,
+    setOffers,
+    selectedOfferIndex,
+    setSelectedOfferIndex, }) {
+    // // State to manage the offers
+    // const [offers, setOffers] = useState([
+    //     {
+    //         id: 'offer-1',
+    //         title: 'Single',
+    //         subtitle: 'Standard price',
+    //         quantity: '1',
+    //         image: null, // Placeholder for image
+    //         priceType: 'default', // 'default' or 'buy_get'
+    //         buyQuantity: '1',
+    //         getQuantity: '1',
+    //         highlight: false,
+    //         selectedByDefault: true,
+    //         tag: '',
+    //     },
+    //     // Add more offers here if needed
+    // ]);
 
-    // State to manage the selected offer tab
-    const [selectedOfferIndex, setSelectedOfferIndex] = useState(0);
+    // // State to manage the selected offer tab
+    // const [selectedOfferIndex, setSelectedOfferIndex] = useState(0);
 
     // Handler for changing offer tab
     const handleOfferTabChange = useCallback(
@@ -88,6 +93,13 @@ function OfferSettings() {
         panelID: `${offer.id}-content`,
         // You might add a delete action here if needed, but the image shows a delete button next to the offer title
     }));
+
+    // Effect to call the parent callback whenever offers change
+    useEffect(() => {
+        if (offerSettingsOnChange) {
+            offerSettingsOnChange(offers);
+        }
+    }, [offers, offerSettingsOnChange])
 
 
     return (
