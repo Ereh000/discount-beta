@@ -73,6 +73,7 @@ export const loader = async ({ request }) => {
                                 title
                                 sku
                                 price
+                                inventoryQuantity
                                 compareAtPrice
                                 selectedOptions {
                                   name
@@ -83,6 +84,7 @@ export const loader = async ({ request }) => {
                             featuredImage{
                                 url
                             }
+                            totalInventory
                           }
                         }
                       }`,

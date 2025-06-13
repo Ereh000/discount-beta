@@ -786,6 +786,7 @@ export default function BundleSettingsCard({
                                   variants: false,
                                   draft: false,
                                   archived: false,
+                                  query: "total_inventory:>0",
                                 },
                               })
                               .then(({ selection }) => {

@@ -1,4 +1,4 @@
-import { Card, Grid, Page } from "@shopify/polaris";
+import { BlockStack, Button, ButtonGroup, Grid, InlineStack, Page } from "@shopify/polaris";
 import React from "react";
 import VolumeSettings from "../Components/VolumeDiscount/VolumeSettings";
 import VolumePreview from "../Components/VolumeDiscount/VolumePreview";
@@ -188,6 +188,9 @@ function MainVolumeDiscount() {
     advancedSettings: settings,
   }
 
+  // Save Settings to Database
+
+
   console.log('allVolumeSettings', allVolumeSettings)
 
   return (
@@ -238,7 +241,29 @@ function MainVolumeDiscount() {
         </Grid.Cell>
 
         <Grid.Cell columnSpan={{ xs: 6, md: 6, lg: 6, xl: 6 }}>
-          <VolumePreview allVolumeSettings={allVolumeSettings} />
+          <BlockStack gap={200}>
+            <VolumePreview allVolumeSettings={allVolumeSettings} />
+            <InlineStack align="end">
+              <ButtonGroup>
+                <Button
+                // onClick={() => handleSave("draft")}
+                // loading={fetcher.state === "submitting"}
+                >
+                  Save as draft
+                </Button>
+                {/* <Button variant="primary" tone="critical">
+                Delete
+              </Button> */}
+                <Button
+                  variant="primary"
+                // onClick={() => handleSave("published")}
+                // loading={fetcher.state === "submitting"}
+                >
+                  Publish
+                </Button>
+              </ButtonGroup>
+            </InlineStack>
+          </BlockStack>
         </Grid.Cell>
       </Grid>
       <br />
