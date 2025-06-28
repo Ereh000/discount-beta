@@ -56,3 +56,13 @@ model BundleProduct {
 
   @@index([bundleId])
 }
+
+model VolumeDiscount {
+  id         Int      @id @default(autoincrement())
+  shop       String   @unique
+  bundleName String? // Added for easier querying/display
+  settings   Json
+  status     String   @default("draft")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}

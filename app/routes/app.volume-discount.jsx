@@ -1,10 +1,18 @@
-import { BlockStack, Button, ButtonGroup, Grid, InlineStack, Page } from "@shopify/polaris";
+import { Banner, BlockStack, Button, ButtonGroup, Grid, InlineStack, Page } from "@shopify/polaris";
 import React from "react";
 import VolumeSettings from "../Components/VolumeDiscount/VolumeSettings";
 import VolumePreview from "../Components/VolumeDiscount/VolumePreview";
 import { useState } from "react";
+import { json, useFetcher } from '@remix-run/react'; // Import useFetcher and json
+import { authenticate } from '../shopify.server'; // Import authenticate
+import prisma from "../db.server"; // Import prisma
 
 function MainVolumeDiscount() {
+
+  // State for banner messages
+  const [showBanner, setShowBanner] = useState(false);
+  const [bannerMessage, setBannerMessage] = useState('');
+  const [bannerTone, setBannerTone] = useState('info'); // 'success', 'critical', 'warning', 'info'
 
   // Block Tab States ------------------ -------------- ----------------
 
@@ -38,6 +46,8 @@ function MainVolumeDiscount() {
   });
 
   // End of Block Tab States -------
+
+  // --------
 
   // Offer Tab States ------------------ -------------- ----------------
 
@@ -110,6 +120,8 @@ function MainVolumeDiscount() {
 
   // End Offer Settings States ------------------------------------------------------------------------
 
+  // -------- 
+
   // Design Tab States -------------------------------------------------------------------------
 
   // State for Background Colors - Initialized with RGBA values
@@ -147,6 +159,8 @@ function MainVolumeDiscount() {
 
   // End of Design Tab States --------------------------------------
 
+  // -------- 
+
   // Advanced Tab States --------------------------------------
 
   const [settings, setSettings] = useState({
@@ -164,6 +178,8 @@ function MainVolumeDiscount() {
 
   // End of Advanced Tab States ----------------------------------------
 
+  // -------- 
+
   // All Volume Settings ------------------------------------------------------
 
   const allVolumeSettings = {
@@ -180,7 +196,7 @@ function MainVolumeDiscount() {
     },
     designSettings: {
       backgroundColors: backgroundColors,
-      pricingColors, pricingColors,
+      pricingColors: pricingColors,
       textColors: textColors,
       typographySettings: typographySettings,
       openColorPickerFor: openColorPickerFor,
@@ -189,12 +205,59 @@ function MainVolumeDiscount() {
   }
 
   // Save Settings to Database
+  const fetcher = useFetcher(); // Initialize useFetcher
 
+  const handleSave = (status) => {
+    // Basic validation: Check if bundleName is not empty
+    if (!bundleName || bundleName.trim() === '') {
+      setShowBanner(true);
+      setBannerMessage("Bundle name cannot be empty. Please provide a name for your bundle.");
+      setBannerTone("critical");
+      return; // Stop the save process
+    }
+
+    fetcher.submit(
+      {
+        volumeSettings: JSON.stringify(allVolumeSettings),
+        status: status,
+      },
+      { method: "post" }
+    );
+  };
+
+  // Effect to handle fetcher responses and update banner
+  useEffect(() => {
+    if (fetcher.data) {
+      setShowBanner(true);
+      setBannerMessage(fetcher.data.message);
+      setBannerTone(fetcher.data.success ? 'success' : 'critical');
+
+      // Optionally, hide the banner after a few seconds for success messages
+      if (fetcher.data.success) {
+        const timer = setTimeout(() => {
+          setShowBanner(false);
+          setBannerMessage('');
+        }, 5000); // Hide after 5 seconds
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [fetcher.data]);
 
   console.log('allVolumeSettings', allVolumeSettings)
 
   return (
     <Page title="Bundle 1">
+      {showBanner && (
+        <Banner
+          title={bannerMessage}
+          onDismiss={() => setShowBanner(false)}
+          tone={bannerTone}
+        >
+          {/* You can add more detailed messages here if needed */}
+        </Banner>
+      )}
+      <br />
+
       <Grid>
         <Grid.Cell columnSpan={{ xs: 6, md: 6, lg: 6, xl: 6 }}>
           <VolumeSettings
@@ -246,8 +309,8 @@ function MainVolumeDiscount() {
             <InlineStack align="end">
               <ButtonGroup>
                 <Button
-                // onClick={() => handleSave("draft")}
-                // loading={fetcher.state === "submitting"}
+                  onClick={() => handleSave("draft")} // Connect to handleSave
+                  loading={fetcher.state === "submitting"}
                 >
                   Save as draft
                 </Button>
@@ -256,10 +319,10 @@ function MainVolumeDiscount() {
               </Button> */}
                 <Button
                   variant="primary"
-                // onClick={() => handleSave("published")}
-                // loading={fetcher.state === "submitting"}
+                  onClick={() => handleSave("published")} // Connect to handleSave
+                  loading={fetcher.state === "submitting"}
                 >
-                  Publish
+                  Save
                 </Button>
               </ButtonGroup>
             </InlineStack>
@@ -273,3 +336,55 @@ function MainVolumeDiscount() {
 }
 
 export default MainVolumeDiscount;
+
+
+// ========== Remix Action Function -----------
+export async function action({ request }) {
+  const { admin } = await authenticate.admin(request);
+  const formData = await request.formData();
+  const volumeSettingsString = formData.get("volumeSettings");
+  const status = formData.get("status");
+
+  if (!volumeSettingsString) {
+    return json({ success: false, message: "No volume settings data provided." }, { status: 400 });
+  }
+
+
+  const response = await admin.graphql(`
+        query{
+            shop {
+                name
+                id
+            }
+        }
+    `);
+
+  const shopData = await response.json();
+  const shopId = shopData.data.shop.id;
+
+  try {
+    const volumeSettings = JSON.parse(volumeSettingsString);
+    // const shop = admin.session.shop;
+
+    // Save or update the settings in the database
+    const savedSettings = await prisma.volumeDiscount.upsert({
+      where: { shop: shopId },
+      update: {
+        settings: volumeSettings,
+        status: status,
+        bundleName: volumeSettings.bundleSettings.bundleName, // Assuming you want to save bundleName directly
+      },
+      create: {
+        shop: shopId,
+        settings: volumeSettings,
+        status: status,
+        bundleName: volumeSettings.bundleSettings.bundleName, // Assuming you want to save bundleName directly
+      },
+    });
+
+    return json({ success: true, message: "Volume discount settings saved successfully!", data: savedSettings });
+  } catch (error) {
+    console.error("Error saving volume discount settings:", error);
+    return json({ success: false, message: "Failed to save volume discount settings." }, { status: 500 });
+  }
+}
