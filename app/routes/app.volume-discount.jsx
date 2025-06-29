@@ -4,8 +4,9 @@ import VolumeSettings from "../Components/VolumeDiscount/VolumeSettings";
 import VolumePreview from "../Components/VolumeDiscount/VolumePreview";
 import { useState } from "react";
 import { json, useFetcher } from '@remix-run/react'; // Import useFetcher and json
-import { authenticate } from '../shopify.server'; // Import authenticate
-import prisma from "../db.server"; // Import prisma
+// import { authenticate } from '../shopify.server'; // Import authenticate
+// import prisma from "../db.server"; // Import prisma
+import { useEffect } from "react";
 
 function MainVolumeDiscount() {
 
@@ -208,7 +209,7 @@ function MainVolumeDiscount() {
   const fetcher = useFetcher(); // Initialize useFetcher
 
   const handleSave = (status) => {
-    // Basic validation: Check if bundleName is not empty
+    // 1. Basic validation: Check if bundleName is not empty
     if (!bundleName || bundleName.trim() === '') {
       setShowBanner(true);
       setBannerMessage("Bundle name cannot be empty. Please provide a name for your bundle.");
@@ -216,12 +217,155 @@ function MainVolumeDiscount() {
       return; // Stop the save process
     }
 
+    // 2. Validate offers
+    const validOffers = offers.filter((offer) => {
+      const isValidTitle = offer.title && offer.title.trim() !== '';
+      const isValidQuantity = offer.quantity && !isNaN(parseInt(offer.quantity)) && parseInt(offer.quantity) > 0;
+      return isValidTitle && isValidQuantity;
+    });
+
+    // Helper function to validate RGBA color objects
+    const isValidColor = (color) => {
+      return (
+        color &&
+        typeof color.red === 'number' &&
+        typeof color.green === 'number' &&
+        typeof color.blue === 'number' &&
+        typeof color.alpha === 'number' &&
+        color.red >= 0 && color.red <= 255 &&
+        color.green >= 0 && color.green <= 255 &&
+        color.blue >= 0 && color.blue <= 255 &&
+        color.alpha >= 0 && color.alpha <= 1
+      );
+    };
+
+    if (validOffers.length === 0) {
+      setShowBanner(true);
+      setBannerMessage("Please add at least one valid offer with a title and a positive quantity.");
+      setBannerTone("critical");
+      return;
+    }
+
+    // Check for unique offer quantities
+    const quantities = validOffers.map((offer) => parseInt(offer.quantity));
+    const uniqueQuantities = new Set(quantities);
+    if (uniqueQuantities.size !== quantities.length) {
+      setShowBanner(true);
+      setBannerMessage("Each offer must have a unique quantity. Please ensure all quantities are distinct.");
+      setBannerTone("critical");
+      return;
+    }
+
+    // 3. Validate Visibility Settings
+    if (!visibilitySettings || !['all_products', 'specific_products', 'specific_collections'].includes(visibilitySettings.visibility)) {
+      setShowBanner(true);
+      setBannerMessage("Visibility settings are invalid. Please select a valid visibility option.");
+      setBannerTone("critical");
+      return;
+    }
+
+    // 4. Validate Header Settings
+    if (!headerSettings || !headerSettings.headerText || headerSettings.headerText.trim() === '' ||
+      !['left', 'center', 'right'].includes(headerSettings.alignment) ||
+      typeof headerSettings.headerLine !== 'boolean' ||
+      typeof headerSettings.lineThickness !== 'number' || headerSettings.lineThickness < 0) {
+      setShowBanner(true);
+      setBannerMessage("Header settings are incomplete or invalid. Please check header text, alignment, line settings.");
+      setBannerTone("critical");
+      return;
+    }
+
+    // 5. Validate Shape Settings
+    if (!shapeSettings || typeof shapeSettings.blockRadius !== 'number' || shapeSettings.blockRadius < 0 ||
+      typeof shapeSettings.blockThickness !== 'number' || shapeSettings.blockThickness < 0) {
+      setShowBanner(true);
+      setBannerMessage("Shape settings are invalid. Please check block radius and thickness.");
+      setBannerTone("critical");
+      return;
+    }
+
+    // 6. Validate Spacing Settings
+    if (!spacingSettings || typeof spacingSettings.spacingTop !== 'number' || spacingSettings.spacingTop < 0 ||
+      typeof spacingSettings.spacingBottom !== 'number' || spacingSettings.spacingBottom < 0) {
+      setShowBanner(true);
+      setBannerMessage("Spacing settings are invalid. Please check top and bottom spacing.");
+      setBannerTone("critical");
+      return;
+    }
+
+    // 7. Validate Checkmark Settings
+    if (!checkmarkSettings || !['show', 'hide'].includes(checkmarkSettings.checkmarkVisibility)) {
+      setShowBanner(true);
+      setBannerMessage("Checkmark settings are invalid. Please select a valid checkmark visibility option.");
+      setBannerTone("critical");
+      return;
+    }
+
+    // 8. Validate Background Colors
+    if (!backgroundColors) {
+      setShowBanner(true);
+      setBannerMessage("Background color settings are incomplete or invalid. Please check all background colors.");
+      setBannerTone("critical");
+      return;
+    }
+
+    // 9. Validate Pricing Colors
+    if (!pricingColors ||
+      !isValidColor(pricingColors.price) ||
+      !isValidColor(pricingColors.comparedPrice)) {
+      setShowBanner(true);
+      setBannerMessage("Pricing color settings are incomplete or invalid. Please check price and compared price colors.");
+      setBannerTone("critical");
+      return;
+    }
+
+    // 10. Validate Text Colors
+    if (!textColors ||
+      !isValidColor(textColors.header) ||
+      !isValidColor(textColors.title) ||
+      !isValidColor(textColors.subtitle) ||
+      !isValidColor(textColors.highlight) ||
+      !isValidColor(textColors.tags)) {
+      setShowBanner(true);
+      setBannerMessage("Text color settings are incomplete or invalid. Please check all text colors.");
+      setBannerTone("critical");
+      return;
+    }
+
+    // 11. Validate Typography Settings
+    const isValidTypography = (typo) => typo && typeof typo.size === 'string' && typo.size.length > 0 && typeof typo.fontStyle === 'string' && typo.fontStyle.length > 0;
+    if (!typographySettings ||
+      !isValidTypography(typographySettings.header) ||
+      !isValidTypography(typographySettings.titlePrice) ||
+      !isValidTypography(typographySettings.subtitleComparedPrice) ||
+      !isValidTypography(typographySettings.tagHighlight)) {
+      setShowBanner(true);
+      setBannerMessage("Typography settings are incomplete or invalid. Please check all font sizes and styles.");
+      setBannerTone("critical");
+      return;
+    }
+
+    // 12. Validate Advanced Settings
+    if (!settings ||
+      typeof settings.variants.allowCustomerChoice !== 'boolean' ||
+      typeof settings.variants.hideThemeVariant !== 'boolean' ||
+      typeof settings.variants.hideOutOfStock !== 'boolean' ||
+      typeof settings.variants.hideThemePrice !== 'boolean' ||
+      typeof settings.pricing.showPricesPerItem !== 'boolean' ||
+      typeof settings.pricing.showCompareAtPrice !== 'boolean') {
+      setShowBanner(true);
+      setBannerMessage("Advanced settings are incomplete or invalid. Please check all advanced options.");
+      setBannerTone("critical");
+      return;
+    }
+
+    // If all validations pass, proceed with submission
     fetcher.submit(
       {
         volumeSettings: JSON.stringify(allVolumeSettings),
         status: status,
       },
-      { method: "post" }
+      { method: "post", action: "/api/volume-discount" }  
     );
   };
 
@@ -336,55 +480,3 @@ function MainVolumeDiscount() {
 }
 
 export default MainVolumeDiscount;
-
-
-// ========== Remix Action Function -----------
-export async function action({ request }) {
-  const { admin } = await authenticate.admin(request);
-  const formData = await request.formData();
-  const volumeSettingsString = formData.get("volumeSettings");
-  const status = formData.get("status");
-
-  if (!volumeSettingsString) {
-    return json({ success: false, message: "No volume settings data provided." }, { status: 400 });
-  }
-
-
-  const response = await admin.graphql(`
-        query{
-            shop {
-                name
-                id
-            }
-        }
-    `);
-
-  const shopData = await response.json();
-  const shopId = shopData.data.shop.id;
-
-  try {
-    const volumeSettings = JSON.parse(volumeSettingsString);
-    // const shop = admin.session.shop;
-
-    // Save or update the settings in the database
-    const savedSettings = await prisma.volumeDiscount.upsert({
-      where: { shop: shopId },
-      update: {
-        settings: volumeSettings,
-        status: status,
-        bundleName: volumeSettings.bundleSettings.bundleName, // Assuming you want to save bundleName directly
-      },
-      create: {
-        shop: shopId,
-        settings: volumeSettings,
-        status: status,
-        bundleName: volumeSettings.bundleSettings.bundleName, // Assuming you want to save bundleName directly
-      },
-    });
-
-    return json({ success: true, message: "Volume discount settings saved successfully!", data: savedSettings });
-  } catch (error) {
-    console.error("Error saving volume discount settings:", error);
-    return json({ success: false, message: "Failed to save volume discount settings." }, { status: 500 });
-  }
-}
