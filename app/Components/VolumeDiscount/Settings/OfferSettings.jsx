@@ -25,6 +25,8 @@ function OfferSettings({
             quantity: '1',
             image: null,
             priceType: 'default',
+            priceValue: 'default',
+            priceAmount: '',
             buyQuantity: '1',
             getQuantity: '1',
             highlight: false,
@@ -80,7 +82,9 @@ function OfferSettings({
     // Options for Price Select
     const priceOptions = [
         { label: 'Default', value: 'default' },
-        // Add other price options if needed
+        { label: 'Discount value %', value: 'discount_percentage' },
+        { label: 'Discount value ₹', value: 'discount_amount' },
+        { label: 'Fixed price ₹', value: 'fixed_price' },
     ];
 
     // Options for Highlight Style Select
@@ -208,14 +212,25 @@ function OfferSettings({
                                     onChange={() => handleOfferSettingChange('priceType', 'default')}
                                 />
                                 {currentOffer.priceType === 'default' && (
-                                    <div style={{ paddingLeft: '' }}> {/* Indent the select */}
+                                    <div style={{ paddingLeft: '' }}>
                                         <Select
                                             label=""
                                             labelHidden
                                             options={priceOptions}
-                                            onChange={(value) => { /* Handle default price type selection */ }}
-                                            value="default" // Assuming 'default' is the only option for now
+                                            onChange={(value) => handleOfferSettingChange('priceValue', value)}
+                                            value={currentOffer.priceValue || 'default'}
                                         />
+                                        {currentOffer.priceValue && currentOffer.priceValue !== 'default' && (
+                                            <TextField
+                                                label=""
+                                                type="number"
+                                                value={currentOffer.priceAmount || ''}
+                                                onChange={(value) => handleOfferSettingChange('priceAmount', value)}
+                                                autoComplete="off"
+                                                suffix={currentOffer.priceValue === 'discount_percentage' ? '%' : '₹'}
+                                                placeholder={`Enter ${currentOffer.priceValue === 'discount_percentage' ? 'percentage' : 'amount'}`}
+                                            />
+                                        )}
                                     </div>
                                 )}
                                 <RadioButton
@@ -277,7 +292,7 @@ function OfferSettings({
                                         onSelect={handleHighlightTabChange}
                                     >
 
-                                        <div className="" style={{paddingLeft: '12px'}}>
+                                        <div className="" style={{ paddingLeft: '12px' }}>
                                             {/* Highlight Text Settings */}
                                             {currentOffer.highlightSettings?.type === 'text' && (
                                                 <BlockStack>

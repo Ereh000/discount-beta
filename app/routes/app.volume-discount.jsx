@@ -61,6 +61,8 @@ function MainVolumeDiscount() {
       quantity: '1',
       image: null, // Placeholder for image
       priceType: 'default', // 'default' or 'buy_get'
+      priceValue: 'default',
+      priceAmount: '',
       buyQuantity: '1',
       getQuantity: '1',
       highlight: false,
@@ -294,12 +296,12 @@ function MainVolumeDiscount() {
     }
 
     // 7. Validate Checkmark Settings
-    if (!checkmarkSettings || !['show', 'hide'].includes(checkmarkSettings.checkmarkVisibility)) {
-      setShowBanner(true);
-      setBannerMessage("Checkmark settings are invalid. Please select a valid checkmark visibility option.");
-      setBannerTone("critical");
-      return;
-    }
+    // if (!checkmarkSettings || !['show', 'hide'].includes(checkmarkSettings.checkmarkVisibility)) {
+    //   setShowBanner(true);
+    //   setBannerMessage("Checkmark settings are invalid. Please select a valid checkmark visibility option.");
+    //   setBannerTone("critical");
+    //   return;
+    // }
 
     // 8. Validate Background Colors
     if (!backgroundColors) {
