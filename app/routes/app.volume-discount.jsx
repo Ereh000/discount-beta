@@ -1,5 +1,4 @@
 import { Banner, BlockStack, Button, ButtonGroup, Grid, InlineStack, Page } from "@shopify/polaris";
-import React from "react";
 import VolumeSettings from "../Components/VolumeDiscount/VolumeSettings";
 import VolumePreview from "../Components/VolumeDiscount/VolumePreview";
 import { useState } from "react";

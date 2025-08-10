@@ -1,133 +1,162 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from "react";
 import {
   Page,
   Layout,
-  Card,
-  Text,
-  LegacyCard,
-  EmptyState,
   Button,
-  BlockStack,
   Banner,
-  Tabs,
-  Grid,
   InlineStack,
-  Modal,
-  Badge,
-  Popover,
-  ActionList,
-} from '@shopify/polaris';
+} from "@shopify/polaris";
 import {
   MenuHorizontalIcon,
   EditIcon,
   DuplicateIcon,
-  DeleteIcon
-} from '@shopify/polaris-icons';
-import { json, useLoaderData, useFetcher } from '@remix-run/react';
+  DeleteIcon,
+} from "@shopify/polaris-icons";
+import { json, useLoaderData, useFetcher } from "@remix-run/react";
 import prisma from "../db.server";
-import { constants } from 'http2';
-import SelectionModel from '../Components/IndexPage/SelectionModel';
-import DashboardList from '../Components/DashboardList';
+import SelectionModel from "../Components/IndexPage/SelectionModel";
+import DashboardList from "../Components/DashboardList";
+import { fetchShop } from "../utils/getShop";
+import Analytics from "../Components/IndexPage/Analytics";
 
-// Add loader function to fetch bundles
-export async function loader() {
+// Updated loader function to fetch both bundles and volumes
+export async function loader({ request }) {
+  const shop = await fetchShop(request);
+
   try {
     const bundles = await prisma.bundle.findMany({
-      // where: {
-      //   shop: "gid://shopify/Shop/73863725283"
-      // },
+      where: {
+        shop: shop.id,
+      },
       orderBy: {
-        createdAt: 'desc'
-      }
+        createdAt: "desc",
+      },
     });
 
     const volumes = await prisma.volumeDiscount.findMany({
-      // where: {
-      //   shop: "gid://shopify/Shop/73863725283"
-      // },
+      where: {
+        shop: shop.id,
+      },
       orderBy: {
-        createdAt: 'desc'
-      }
+        createdAt: "desc",
+      },
     });
-
 
     return json({ bundles, volumes });
   } catch (error) {
-    console.error("Error fetching bundles:", error);
+    console.error("Error fetching bundles and volumes:", error);
     return json({ bundles: [], volumes: [] }, { status: 500 });
   }
 }
 
-// Add action function to handle status toggle
+// Updated action function to handle both bundle and volume status toggle
 export async function action({ request }) {
   const formData = await request.formData();
-  const bundleId = formData.get('bundleId');
-  const newStatus = formData.get('newStatus');
+  const itemId = formData.get("itemId");
+  const itemType = formData.get("itemType"); // 'bundle' or 'volume'
+  const newStatus = formData.get("newStatus");
 
   try {
-    // If setting to published, first set all bundles to draft
-    if (newStatus === 'published') {
-      await prisma.bundle.updateMany({
+    if (itemType === "bundle") {
+      // If setting to published, first set all bundles to draft
+      if (newStatus === "published") {
+        await prisma.bundle.updateMany({
+          where: {
+            status: "published",
+          },
+          data: {
+            status: "draft",
+          },
+        });
+      }
+
+      // Then update the selected bundle
+      const updatedBundle = await prisma.bundle.update({
         where: {
-          status: 'published'
+          id: parseInt(itemId),
         },
         data: {
-          status: 'draft'
-        }
+          status: newStatus,
+        },
       });
-    }
 
-    // Then update the selected bundle
-    const updatedBundle = await prisma.bundle.update({
-      where: {
-        id: parseInt(bundleId)
-      },
-      data: {
-        status: newStatus
+      return json({ success: true, item: updatedBundle, type: "bundle" });
+    } else if (itemType === "volume") {
+      // If setting to published, first set all volumes to draft
+      if (newStatus === "published") {
+        await prisma.volumeDiscount.updateMany({
+          where: {
+            status: "published",
+          },
+          data: {
+            status: "draft",
+          },
+        });
       }
-    });
 
-    return json({ success: true, bundle: updatedBundle });
+      // Then update the selected volume
+      const updatedVolume = await prisma.volumeDiscount.update({
+        where: {
+          id: parseInt(itemId),
+        },
+        data: {
+          status: newStatus,
+        },
+      });
+
+      return json({ success: true, item: updatedVolume, type: "volume" });
+    }
   } catch (error) {
-    console.error("Error updating bundle status:", error);
+    console.error(`Error updating ${itemType} status:`, error);
     return json({ success: false, error: error.message }, { status: 500 });
   }
 }
 
 export default function Dashboard() {
   const { bundles, volumes } = useLoaderData();
-  // console.log("Bundles:", bundles);
-  // console.log("Volumes:", volumes);
-
+  console.log("Bundles:", bundles);
+  console.log("Volumes:", volumes);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activePopoverId, setActivePopoverId] = useState(null);
   const fetcher = useFetcher();
 
-  console.log("isModalOpen", isModalOpen);
-
-
   const handleOpenModal = useCallback(() => setIsModalOpen(true), []);
   const handleCloseModal = useCallback(() => setIsModalOpen(false), []);
 
-  // Toggle popover for bundle actions
-  const togglePopover = useCallback((id) => {
-    setActivePopoverId(activePopoverId === id ? null : id);
-  }, [activePopoverId]);
+  // Toggle popover for both bundle and volume actions
+  const togglePopover = useCallback(
+    (id) => {
+      setActivePopoverId(activePopoverId === id ? null : id);
+    },
+    [activePopoverId],
+  );
 
   // Handle bundle status toggle
-  const handleStatusToggle = useCallback((bundleId, currentStatus) => {
-    const newStatus = currentStatus === 'published' ? 'draft' : 'published';
+  const handleStatusToggle = useCallback(
+    (itemId, currentStatus, itemType = "bundle") => {
+      const newStatus = currentStatus === "published" ? "draft" : "published";
 
-    // Use fetcher to submit the form data
-    fetcher.submit(
-      {
-        bundleId: bundleId.toString(),
-        newStatus
-      },
-      { method: 'post' }
-    );
-  }, [fetcher]);
+      // Use fetcher to submit the form data
+      fetcher.submit(
+        {
+          itemId: itemId.toString(),
+          itemType,
+          newStatus,
+        },
+        { method: "post" },
+      );
+    },
+    [fetcher],
+  );
+
+  // Handle volume status toggle
+  const handleVolumeToggle = useCallback(
+    (volumeId, currentStatus) => {
+      handleStatusToggle(volumeId, currentStatus, "volume");
+    },
+    [handleStatusToggle],
+  );
 
   return (
     <Page title="Dashboard">
@@ -137,64 +166,22 @@ export default function Dashboard() {
           <Banner
             title="Rapi app is not activated yet"
             status="warning"
-            tone='warning'
-            onDismiss={() => { }}
+            tone="warning"
+            onDismiss={() => {}}
             action={{
-              content: 'Activate',
-              onAction: () => { }
+              content: "Activate",
+              onAction: () => {},
             }}
           >
-            <p>Please activate the app by clicking 'Activate' button below and then 'Save' in the following page.</p>
+            <p>
+              Please activate the app by clicking 'Activate' button below and
+              then 'Save' in the following page.
+            </p>
           </Banner>
         </Layout.Section>
 
         <Layout.Section>
-          <TimeframeTabs />
-          <div>
-            <Grid>
-              <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3, xl: 3 }}>
-                <Card style={{ flex: 1 }}>
-                  <BlockStack gap="200" padding="400">
-                    <Text variant="bodyMd" as="p" color="subdued">Total additional revenue</Text>
-                    <Text variant="headingLg" as="h3">Rs. 0.00 INR</Text>
-                    <Text variant="bodyMd" as="p">$0.00 USD</Text>
-                    <Button plain>View Report</Button>
-                  </BlockStack>
-                </Card>
-              </Grid.Cell>
-              {/* Other stat cards */}
-              <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3, xl: 3 }}>
-                <Card style={{ flex: 1 }}>
-                  <BlockStack gap="200" padding="400">
-                    <Text variant="bodyMd" as="p" color="subdued">Total orders</Text>
-                    <Text variant="headingLg" as="h3">0</Text>
-                    <div style={{ height: '24px' }}></div>
-                    <Button plain>View Report</Button>
-                  </BlockStack>
-                </Card>
-              </Grid.Cell>
-              <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3, xl: 3 }}>
-                <Card style={{ flex: 1 }}>
-                  <BlockStack gap="200" padding="400">
-                    <Text variant="bodyMd" as="p" color="subdued">ROI</Text>
-                    <Text variant="headingLg" as="h3">∞</Text>
-                    <div style={{ height: '24px' }}></div>
-                    <Button plain>View Report</Button>
-                  </BlockStack>
-                </Card>
-              </Grid.Cell>
-              <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3, xl: 3 }}>
-                <Card style={{ flex: 1 }}>
-                  <BlockStack gap="200" padding="400">
-                    <Text variant="bodyMd" as="p" color="subdued">Average extra revenue</Text>
-                    <Text variant="headingLg" as="h3">Rs. 0.00 INR</Text>
-                    <Text variant="bodyMd" as="p">$0.00 USD</Text>
-                    <Button plain>View Report</Button>
-                  </BlockStack>
-                </Card>
-              </Grid.Cell>
-            </Grid>
-          </div>
+          <Analytics />
         </Layout.Section>
 
         {/* Middle Banner */}
@@ -202,19 +189,32 @@ export default function Dashboard() {
           <Banner
             title="Exciting news"
             status="warning"
-            tone='info'
-            onDismiss={() => { }}
+            tone="info"
+            onDismiss={() => {}}
           >
-            <p>We just rolled out a highly requested feature in Rapi Bundle: Free Gift.</p>
-            <p>From what we've seen, merchants who add a Free Gift to their bundles see a 23% increase in revenue on average. You can enable it in a few clicks — no dev required. Please contact us if you have any question!</p>
+            <p>
+              We just rolled out a highly requested feature in Rapi Bundle: Free
+              Gift.
+            </p>
+            <p>
+              From what we've seen, merchants who add a Free Gift to their
+              bundles see a 23% increase in revenue on average. You can enable
+              it in a few clicks — no dev required. Please contact us if you
+              have any question!
+            </p>
           </Banner>
         </Layout.Section>
 
         <Layout.Section>
           <InlineStack align="end">
-            <Button variant="primary" onClick={() => {
-              setIsModalOpen(true);
-            }}>Create a new bundle</Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                setIsModalOpen(true);
+              }}
+            >
+              Create a new bundle
+            </Button>
           </InlineStack>
         </Layout.Section>
 
@@ -222,7 +222,9 @@ export default function Dashboard() {
         <Layout.Section>
           <DashboardList
             bundles={bundles}
+            volumes={volumes}
             handleStatusToggle={handleStatusToggle}
+            handleVolumeToggle={handleVolumeToggle}
             togglePopover={togglePopover}
             activePopoverId={activePopoverId}
             setActivePopoverId={setActivePopoverId}
@@ -230,7 +232,6 @@ export default function Dashboard() {
             DeleteIcon={DeleteIcon}
             DuplicateIcon={DuplicateIcon}
             MenuHorizontalIcon={MenuHorizontalIcon}
-
           />
         </Layout.Section>
       </Layout>
@@ -242,46 +243,6 @@ export default function Dashboard() {
         isModalOpen={isModalOpen}
         handleCloseModal={handleCloseModal}
       />
-
     </Page>
-  );
-};
-
-
-function TimeframeTabs() {
-  const [selected, setSelected] = useState(0);
-
-  const handleTabChange = useCallback(
-    (selectedTabIndex) => setSelected(selectedTabIndex),
-    [],
-  );
-
-  const tabs = [
-    {
-      id: 'today',
-      content: 'Today',
-    },
-    {
-      id: '7days',
-      content: '7 Days',
-    },
-    {
-      id: '1month',
-      content: '1 Month',
-    },
-    {
-      id: '3months',
-      content: '3 Months',
-    },
-    {
-      id: 'alltime',
-      content: 'All time',
-    },
-  ];
-
-  return (
-    <div style={{ marginBottom: '20px' }}>
-      <Tabs tabs={tabs} selected={selected} onSelect={handleTabChange} />
-    </div>
   );
 }

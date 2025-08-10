@@ -25,8 +25,8 @@ export default function App() {
         <Link to="/app/analytics">Analytics</Link>
         <Link to="/app/tutorials">Tutorials</Link>
         <Link to="/app/additional">Additional page</Link>
-        <Link to="/app/volume-discount">Volume discount</Link>
-        <Link to="/app/product-bundle-beta-new">Product Bundle (Beta)</Link>
+        {/* <Link to="/app/volume-discount">Volume discount</Link> */}
+        {/* <Link to="/app/product-bundle-beta-new">Product Bundle (Beta)</Link> */}
       </NavMenu>
       <Outlet />
     </AppProvider>
