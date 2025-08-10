@@ -127,7 +127,7 @@ const SelectionModel = ({ isModalOpen, handleCloseModal }) => {
                         </Text>
 
                         <div style={{ marginTop: 'auto', paddingTop: '10px' }}>
-                            <Button fullWidth variant='primary' url='/app/product-bundle'>Create the deal</Button>
+                            <Button fullWidth variant='primary' url='/app/product-bundle/new'>Create the deal</Button>
                         </div>
                     </div>
 
@@ -264,7 +264,7 @@ const SelectionModel = ({ isModalOpen, handleCloseModal }) => {
                         </Text>
 
                         <div style={{ marginTop: 'auto', paddingTop: '10px' }}>
-                            <Button fullWidth url='/app/volume-discount' variant='primary'>Create the deal</Button>
+                            <Button fullWidth url='/app/volume-discount/new' variant='primary'>Create the deal</Button>
                         </div>
                     </div>
                 </div>

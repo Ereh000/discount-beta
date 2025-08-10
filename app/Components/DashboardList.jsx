@@ -37,9 +37,7 @@ const DashboardList = ({
             padding: "16px",
           }}
         >
-          <div
-            style={{ display: "flex", alignItems: "center", gap: "16px" }}
-          >
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
             {/* Toggle button */}
             <div style={{ position: "relative" }}>
               <input
@@ -96,18 +94,14 @@ const DashboardList = ({
             </Text>
           </div>
 
-          <div
-            style={{ display: "flex", alignItems: "center", gap: "16px" }}
-          >
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
             {/* Product type */}
             <Text variant="bodyMd" as="span">
               Product Bundle
             </Text>
 
             {/* Status badge */}
-            <Badge
-              tone={bundle.status === "published" ? "success" : "info"}
-            >
+            <Badge tone={bundle.status === "published" ? "success" : "info"}>
               {bundle.status === "published" ? "Active" : "Draft"}
             </Badge>
 
@@ -130,7 +124,7 @@ const DashboardList = ({
                     {
                       content: "Edit",
                       icon: EditIcon,
-                      url: `/app/edit-product-bundle/${bundle.id}`,
+                      url: `/app/product-bundle/${bundle.id}`,
                     },
                     {
                       content: "Duplicate",
@@ -173,9 +167,7 @@ const DashboardList = ({
             padding: "16px",
           }}
         >
-          <div
-            style={{ display: "flex", alignItems: "center", gap: "16px" }}
-          >
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
             {/* Toggle button */}
             <div style={{ position: "relative" }}>
               <input
@@ -183,9 +175,7 @@ const DashboardList = ({
                 name="volume-status"
                 id={`toggle-volume-${volume.id}`}
                 checked={volume.status === "published"}
-                onChange={() =>
-                  handleVolumeToggle(volume.id, volume.status)
-                }
+                onChange={() => handleVolumeToggle(volume.id, volume.status)}
                 style={{
                   appearance: "none",
                   width: "36px",
@@ -220,24 +210,21 @@ const DashboardList = ({
 
             {/* Visibility type */}
             <Text variant="bodyMd" as="span" color="subdued">
-              {volume.settings?.bundleSettings?.visibilitySettings?.visibility === "all_products"
+              {volume.settings?.bundleSettings?.visibilitySettings
+                ?.visibility === "all_products"
                 ? "All products"
                 : "Specific products"}
             </Text>
           </div>
 
-          <div
-            style={{ display: "flex", alignItems: "center", gap: "16px" }}
-          >
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
             {/* Product type */}
             <Text variant="bodyMd" as="span">
               Volume Discount
             </Text>
 
             {/* Status badge */}
-            <Badge
-              tone={volume.status === "published" ? "success" : "info"}
-            >
+            <Badge tone={volume.status === "published" ? "success" : "info"}>
               {volume.status === "published" ? "Active" : "Draft"}
             </Badge>
 
@@ -260,7 +247,7 @@ const DashboardList = ({
                     {
                       content: "Edit",
                       icon: EditIcon,
-                      url: `/app/edit-volume-discount/${volume.id}`,
+                      url: `/app/volume-discount/${volume.id}`, // This will work with the dynamic route
                     },
                     {
                       content: "Duplicate",
@@ -290,7 +277,8 @@ const DashboardList = ({
   };
 
   // Check if we have any data to display
-  const hasData = (bundles && bundles.length > 0) || (volumes && volumes.length > 0);
+  const hasData =
+    (bundles && bundles.length > 0) || (volumes && volumes.length > 0);
 
   return (
     <div>
@@ -306,7 +294,10 @@ const DashboardList = ({
             action={{ content: "Add Bundle Blocks", onAction: () => {} }}
             image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
           >
-            <p>Create product bundles or volume discounts to increase your average order value.</p>
+            <p>
+              Create product bundles or volume discounts to increase your
+              average order value.
+            </p>
           </EmptyState>
         </LegacyCard>
       )}

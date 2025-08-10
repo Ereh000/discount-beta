@@ -1,5 +1,3 @@
-// app-additional
-
 import {
   Grid,
   Page,
@@ -9,119 +7,216 @@ import {
   Banner,
 } from "@shopify/polaris";
 import React, { useState, useCallback, useEffect } from "react";
-import { useFetcher } from "@remix-run/react";
+import { useFetcher, useLoaderData, useParams, json } from "@remix-run/react";
 import "./_index/style.css";
 import BundleSettingsCard from "../Components/Productbundle/BundleSettings";
 import BundleLivePreview from "../Components/Productbundle/BundleLivePreview";
+import prisma from "../db.server";
+import { fetchShop } from "../utils/getShop";
+
+// ========== Remix Loader Function -----------
+export async function loader({ request, params }) {
+  const { id } = params;
+  const shop = await fetchShop(request);
+
+  // If id is "new", return empty data for creation
+  if (id === "new") {
+    return json({ 
+      success: true, 
+      isEdit: false, 
+      data: null 
+    });
+  }
+
+  // If id exists, fetch the bundle data for editing
+  try {
+    const bundle = await prisma.bundle.findFirst({
+      where: {
+        id: parseInt(id),
+        shop: shop.id,
+      },
+      include: {
+        products: true, // Include related products
+      },
+    });
+
+    if (!bundle) {
+      throw new Response("Bundle not found", { status: 404 });
+    }
+
+    return json({ 
+      success: true, 
+      isEdit: true, 
+      data: bundle 
+    });
+  } catch (error) {
+    console.error("Error loading bundle:", error);
+    throw new Response("Error loading bundle", { status: 500 });
+  }
+}
 
 export default function EditProductBundle() {
-  // Lift state up from BundleSettingsCard
-  const [bundleName, setBundleName] = useState("Bundle 1");
-  const [headerText, setHeaderText] = useState("Frequently bought together");
-  const [alignment, setAlignment] = useState("left");
-  const [footerText, setFooterText] = useState("Total :");
-  const [buttonText, setButtonText] = useState("Claim Offer");
-  const [position, setPosition] = useState("all");
-  const [publishOption, setPublishOption] = useState("immediately");
-  const [selectedTemplate, setSelectedTemplate] = useState("royal");
-  const [selectedColor, setSelectedColor] = useState("purple");
+  const { success, isEdit, data } = useLoaderData();
+  const params = useParams();
+  const { id } = params;
+
+  // Helper function to initialize state from loaded data
+  const initializeState = (defaultValue, settingsPath = null, directPath = null) => {
+    if (isEdit && data) {
+      if (directPath) {
+        return data[directPath] !== undefined ? data[directPath] : defaultValue;
+      }
+      if (settingsPath && data.settings) {
+        const keys = settingsPath.split('.');
+        let value = data.settings;
+        for (const key of keys) {
+          value = value?.[key];
+        }
+        return value !== undefined ? value : defaultValue;
+      }
+    }
+    return defaultValue;
+  };
+
+  // Initialize all state variables
+  const [bundleName, setBundleName] = useState(initializeState("Bundle 1", null, "name"));
+  const [headerText, setHeaderText] = useState(initializeState("Frequently bought together", "header"));
+  const [alignment, setAlignment] = useState(initializeState("left", "alignment"));
+  const [footerText, setFooterText] = useState(initializeState("Total :", "footer"));
+  const [buttonText, setButtonText] = useState(initializeState("Claim Offer", "button"));
+  const [position, setPosition] = useState(initializeState("all", "position"));
+  const [publishOption, setPublishOption] = useState(initializeState("immediately", "publishOption"));
+  const [selectedTemplate, setSelectedTemplate] = useState(initializeState("royal", "template"));
+  const [selectedColor, setSelectedColor] = useState(initializeState("purple", "color"));
+
   // Pricing options
-  const [pricingOption, setPricingOption] = useState("default");
-  const [discountPercentage, setDiscountPercentage] = useState("10");
-  const [fixedDiscount, setFixedDiscount] = useState("25");
-  const [fixedPrice, setFixedPrice] = useState("99");
+  const [pricingOption, setPricingOption] = useState(initializeState("default", "pricing.option"));
+  const [discountPercentage, setDiscountPercentage] = useState(initializeState("10", "pricing.discountPercentage"));
+  const [fixedDiscount, setFixedDiscount] = useState(initializeState("25", "pricing.fixedDiscount"));
+  const [fixedPrice, setFixedPrice] = useState(initializeState("99", "pricing.fixedPrice"));
+
   // Highlight options
-  const [highlightOption, setHighlightOption] = useState("text");
-  const [highlightTitle, setHighlightTitle] = useState("Unlock Your Discount");
-  const [highlightTimerTitle, setHighlightTimerTitle] =
-    useState("Offer ends in");
-  const [isBlinking, setIsBlinking] = useState(false);
-  const [highlightStyle, setHighlightStyle] = useState("solid");
-  const [timerEndDate, setTimerEndDate] = useState("");
-  const [timerFormat, setTimerFormat] = useState("dd:hh:mm:ss");
-  // Products in bundle
-  const [products, setProducts] = useState([
-    {
-      id: 1,
-      name: "",
-      quantity: 1,
-      productId: null,
-      image: null,
-      productHandle: null,
-    },
-    {
-      id: 2,
-      name: "",
-      quantity: 1,
-      productId: null,
-      image: null,
-      productHandle: null,
-    },
-    {
-      id: 3,
-      name: "",
-      quantity: 1,
-      productId: null,
-      image: null,
-      productHandle: null,
-    },
-  ]);
-  // console.log("products", products)
-  // First, add these new state variables at the top of your EditProductBundle component
-  const [typography, setTypography] = useState({
-    header: { size: "18", weight: "Bold" },
-    titlePrice: { size: "16", weight: "Bold" },
-    quantityPrice: { size: "13", fontStyle: "Regular" },
-    highlight: { size: "10.5", fontStyle: "Bold" },
-  });
-  const [spacing, setSpacing] = useState({
-    bundleTop: "10",
-    bundleBottom: "6",
-    footerTop: "20",
-    footerBottom: "10",
-  });
-  const [shapes, setShapes] = useState({
-    bundle: "Rounded",
-    footer: "Rounded",
-    addToCart: "Rounded",
-  });
-  const [productImageSize, setProductImageSize] = useState("56");
-  const [iconStyle, setIconStyle] = useState("Plus 5");
-  const [borderThickness, setBorderThickness] = useState({
-    bundle: "1",
-    footer: "0",
-    addToCart: "2",
+  const [highlightOption, setHighlightOption] = useState(initializeState("text", "highlight.option"));
+  const [highlightTitle, setHighlightTitle] = useState(initializeState("Unlock Your Discount", "highlight.title"));
+  const [highlightTimerTitle, setHighlightTimerTitle] = useState(initializeState("Offer ends in", "highlight.timerTitle"));
+  const [isBlinking, setIsBlinking] = useState(initializeState(false, "highlight.isBlinking"));
+  const [highlightStyle, setHighlightStyle] = useState(initializeState("solid", "highlight.style"));
+  const [timerEndDate, setTimerEndDate] = useState(initializeState("", "highlight.timerEndDate"));
+  const [timerFormat, setTimerFormat] = useState(initializeState("dd:hh:mm:ss", "highlight.timerFormat"));
+
+  // Products in bundle - Initialize from loaded data or defaults
+  const [products, setProducts] = useState(() => {
+    if (isEdit && data?.products && data.products.length > 0) {
+      return data.products.map((product, index) => ({
+        id: index + 1,
+        name: product.name || "",
+        quantity: product.quantity || 1,
+        productId: product.productId || null,
+        image: product.image || null,
+        productHandle: product.productHandle || null,
+      }));
+    }
+    return [
+      {
+        id: 1,
+        name: "",
+        quantity: 1,
+        productId: null,
+        image: null,
+        productHandle: null,
+      },
+      {
+        id: 2,
+        name: "",
+        quantity: 1,
+        productId: null,
+        image: null,
+        productHandle: null,
+      },
+      {
+        id: 3,
+        name: "",
+        quantity: 1,
+        productId: null,
+        image: null,
+        productHandle: null,
+      },
+    ];
   });
 
-  // First, add these new state variables at the top of your component
-  // color tab states
-  const [colors, setColors] = useState({
-    background: "",
-    border: "#E1E3E5",
-    footerBackground: "#F6F6F7",
-    buttonBackground: "",
-    buttonBorder: "",
-    highlightBackground: "",
-    quantityBackground: "",
-    price: "#000000",
-    comparedPrice: "#FF0000",
-    headerText: "#000000",
-    titleText: "#000000",
-    highlightText: "#FFFFFF",
-    addToCartText: "#FFFFFF",
-    quantityText: "#000000",
-    footerText: "",
-  });
-  // console.log("products", products)
+  // Typography settings
+  const [typography, setTypography] = useState(
+    initializeState({
+      header: { size: "18", weight: "Bold" },
+      titlePrice: { size: "16", weight: "Bold" },
+      quantityPrice: { size: "13", fontStyle: "Regular" },
+      highlight: { size: "10.5", fontStyle: "Bold" },
+    }, "typography")
+  );
 
-  const [settings, setSettings] = useState({
-    variantChoice: true,
-    showPrices: true,
-    showComparePrice: true,
-    skipCart: false,
-    redirectToProduct: true,
-    redirectToNewTab: true,
-  });
+  // Spacing settings
+  const [spacing, setSpacing] = useState(
+    initializeState({
+      bundleTop: "10",
+      bundleBottom: "6",
+      footerTop: "20",
+      footerBottom: "10",
+    }, "spacing")
+  );
+
+  // Shape settings
+  const [shapes, setShapes] = useState(
+    initializeState({
+      bundle: "Rounded",
+      footer: "Rounded",
+      addToCart: "Rounded",
+    }, "shapes")
+  );
+
+  const [productImageSize, setProductImageSize] = useState(initializeState("56", "productImageSize"));
+  const [iconStyle, setIconStyle] = useState(initializeState("Plus 5", "iconStyle"));
+
+  // Border thickness
+  const [borderThickness, setBorderThickness] = useState(
+    initializeState({
+      bundle: "1",
+      footer: "0",
+      addToCart: "2",
+    }, "borderThickness")
+  );
+
+  // Color settings
+  const [colors, setColors] = useState(
+    initializeState({
+      background: "",
+      border: "#E1E3E5",
+      footerBackground: "#F6F6F7",
+      buttonBackground: "",
+      buttonBorder: "",
+      highlightBackground: "",
+      quantityBackground: "",
+      price: "#000000",
+      comparedPrice: "#FF0000",
+      headerText: "#000000",
+      titleText: "#000000",
+      highlightText: "#FFFFFF",
+      addToCartText: "#FFFFFF",
+      quantityText: "#000000",
+      footerText: "",
+    }, "colors")
+  );
+
+  // General settings
+  const [settings, setSettings] = useState(
+    initializeState({
+      variantChoice: true,
+      showPrices: true,
+      showComparePrice: true,
+      skipCart: false,
+      redirectToProduct: true,
+      redirectToNewTab: true,
+    }, "general")
+  );
 
   // Handler to add a new product to the bundle
   const handleAddProduct = useCallback(() => {
@@ -171,9 +266,8 @@ export default function EditProductBundle() {
     [products],
   );
 
-  // In EditProductBundle component, add this before the return statement
+  // Save handler using separate API route
   const fetcher = useFetcher();
-  // console.log(fetcher.data?.bundleData, "success")
   const handleSave = async (status) => {
     // Check if any products have been selected
     const hasSelectedProducts = products.some(
@@ -181,13 +275,8 @@ export default function EditProductBundle() {
     );
 
     if (!hasSelectedProducts) {
-      // Show error message if no products are selected
       setShowBanner(true);
-      fetcher.data = {
-        success: false,
-        error:
-          "Please select at least one product for your bundle before saving.",
-      };
+      setErrorMessage("Please select at least one product for your bundle before saving.");
       return;
     }
 
@@ -222,6 +311,8 @@ export default function EditProductBundle() {
       iconStyle,
       borderThickness,
       colors,
+      bundleId: id, // Pass the ID to determine create vs update
+      isEdit: isEdit, // Pass edit flag
     };
 
     fetcher.submit(
@@ -232,22 +323,32 @@ export default function EditProductBundle() {
 
   // State for banner
   const [showBanner, setShowBanner] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
   useEffect(() => {
     if (fetcher.data) {
       setShowBanner(true);
     }
   }, [fetcher.data]);
 
+  const pageTitle = isEdit ? `Edit ${bundleName}` : "Create Product Bundle";
+
   return (
-    <Page title={bundleName} backAction={{ url: "/app" }}>
-      {showBanner && fetcher.data && (
+    <Page 
+      title={pageTitle} 
+      backAction={{ content: "Bundles", url: "/app" }}
+    >
+      {showBanner && (fetcher.data || errorMessage) && (
         <div className="">
           <Banner
-            title="Something went wrong"
-            onDismiss={() => setShowBanner(false)}
+            title={fetcher.data?.success ? "Success!" : "Something went wrong"}
+            onDismiss={() => {
+              setShowBanner(false);
+              setErrorMessage("");
+            }}
             tone={fetcher.data?.success ? "success" : "critical"}
           >
-            <p>{fetcher.data?.message || fetcher.data?.error}</p>
+            <p>{fetcher.data?.message || fetcher.data?.error || errorMessage}</p>
           </Banner>
           <br />
         </div>
@@ -329,8 +430,7 @@ export default function EditProductBundle() {
             selectedTemplate={selectedTemplate}
             selectedColor={selectedColor}
             settings={settings}
-            products={products} // Add this line
-            // Add new props
+            products={products}
             highlightOption={highlightOption}
             highlightTitle={highlightTitle}
             highlightTimerTitle={highlightTimerTitle}
@@ -338,7 +438,6 @@ export default function EditProductBundle() {
             timerFormat={timerFormat}
             highlightStyle={highlightStyle}
             isBlinking={isBlinking}
-            // ... existing props ...
             typography={typography}
             spacing={spacing}
             shapes={shapes}
@@ -364,7 +463,7 @@ export default function EditProductBundle() {
                 onClick={() => handleSave("published")}
                 loading={fetcher.state === "submitting"}
               >
-                Publish
+                {isEdit ? "Update" : "Publish"}
               </Button>
             </ButtonGroup>
           </InlineStack>
