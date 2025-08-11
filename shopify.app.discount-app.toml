@@ -1,0 +1,24 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "6151641bf090717bc67f80db6d2f9c01"
+name = "discount-app"
+handle = "discount-app-1172"
+application_url = "https://midi-guitars-reforms-positioning.trycloudflare.com"
+embedded = true
+
+[build]
+include_config_on_deploy = true
+automatically_update_urls_on_dev = true
+
+[webhooks]
+api_version = "2025-07"
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "write_products,read_products,write_discounts,write_discounts_allocator_functions"
+
+[auth]
+redirect_urls = ["https://midi-guitars-reforms-positioning.trycloudflare.com/auth/callback", "https://midi-guitars-reforms-positioning.trycloudflare.com/auth/shopify/callback", "https://midi-guitars-reforms-positioning.trycloudflare.com/api/auth/callback"]
+
+[pos]
+embedded = false

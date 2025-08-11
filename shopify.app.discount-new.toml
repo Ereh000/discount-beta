@@ -6,9 +6,6 @@ name = "discount-new"
 application_url = "https://example.com"
 embedded = true
 
-[build]
-automatically_update_urls_on_dev = true
-
 [webhooks]
 api_version = "2025-07"
 
@@ -22,6 +19,9 @@ use_legacy_install_flow = false
 redirect_urls = [ "https://example.com/api/auth" ]
 
 [app_proxy]
-url = "https://jc-setting-premier-conceptual.trycloudflare.com/api"
+url = "https://kerry-montgomery-robertson-writings.trycloudflare.com/api"
 subpath = "vol-api"
 prefix = "apps"
+
+[build]
+automatically_update_urls_on_dev = true

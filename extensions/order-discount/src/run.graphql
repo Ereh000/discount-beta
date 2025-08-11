@@ -1,0 +1,22 @@
+query RunInput {
+  cart {
+    lines {
+      quantity
+    }
+    cost {
+      subtotalAmount {
+        amount
+      }
+    }
+  }
+  # discountNode {
+  #   metafield(namespace: "volume-discount", key: "offer-settings") {
+  #     jsonValue
+  #   }
+  # }
+  shop {
+    metafield(namespace: "volume-discount", key: "offer-settings") {
+      value
+    }
+  }
+}
