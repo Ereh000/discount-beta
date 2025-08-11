@@ -1,6 +1,8 @@
 import { authenticate } from '../shopify.server';
 import prisma from "../db.server";
 import { json } from '@remix-run/node';
+import { fetchShop } from '../utils/getShop';
+import { saveOfferSettings } from '../utils/saveOfferSettings';
 
 // ========== Remix Action Function -----------
 export async function action({ request }) {
@@ -15,20 +17,21 @@ export async function action({ request }) {
     return json({ success: false, message: "No volume settings data provided." }, { status: 400 });
   }
 
-  const response = await admin.graphql(
-    `query{
-      shop {
-        name
-        id
-      }
-    }`
-  );
-
-  const shopData = await response.json();
-  const shopId = shopData.data.shop.id;
+  const shop = await fetchShop(request);
+  const shopId = shop.id;
 
   try {
     const volumeSettings = JSON.parse(volumeSettingsString);
+
+    // console.log("offerSettings", volumeSettings?.offerSettings);
+    // First save the offersettings to app metafields
+    const metafield = await saveOfferSettings(request, shopId, volumeSettings?.offerSettings);
+    
+    if(!metafield) {
+      return json({ success: false, message: "Failed to save offer settings." }, { status: 500 });
+    }
+
+    console.log("Metafield successfully!", metafield);
 
     let savedSettings;
 

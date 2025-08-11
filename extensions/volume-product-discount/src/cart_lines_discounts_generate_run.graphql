@@ -1,0 +1,34 @@
+query RunInput {
+  shop {
+    metafield(namespace: "volume-discount", key: "offer-settings") {
+      jsonValue
+    }
+  }
+  cart {
+    lines {
+      id
+      quantity
+      cost {
+        totalAmount {
+          amount
+          currencyCode
+        }
+      }
+      merchandise {
+        ... on ProductVariant {
+          id
+          product {
+            id
+            title
+          }
+        }
+      }
+    }
+    cost {
+      totalAmount {
+        amount
+        currencyCode
+      }
+    }
+  }
+}

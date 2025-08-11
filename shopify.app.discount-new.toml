@@ -22,6 +22,6 @@ use_legacy_install_flow = false
 redirect_urls = [ "https://example.com/api/auth" ]
 
 [app_proxy]
-url = "https://medium-hill-progress-sandy.trycloudflare.com/api"
-subpath = "api"
+url = "https://jc-setting-premier-conceptual.trycloudflare.com/api"
+subpath = "vol-api"
 prefix = "apps"
