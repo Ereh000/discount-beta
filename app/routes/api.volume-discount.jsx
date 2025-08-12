@@ -143,8 +143,6 @@ export async function action({ request }) {
   }
 }
 
-// ... rest of the loader function remains the same
-
 
 // ========== Remix Loader Function -----------
 export async function loader({ request }) {

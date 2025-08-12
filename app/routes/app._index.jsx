@@ -1,10 +1,13 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   Page,
   Layout,
   Button,
   Banner,
   InlineStack,
+  Modal,
+  Toast,
+  Frame,
 } from "@shopify/polaris";
 import {
   MenuHorizontalIcon,
@@ -19,7 +22,7 @@ import DashboardList from "../Components/DashboardList";
 import { fetchShop } from "../utils/getShop";
 import Analytics from "../Components/IndexPage/Analytics";
 
-// Updated loader function to fetch both bundles and volumes
+// Loader and action functions remain the same...
 export async function loader({ request }) {
   const shop = await fetchShop(request);
 
@@ -49,16 +52,14 @@ export async function loader({ request }) {
   }
 }
 
-// Updated action function to handle both bundle and volume status toggle
 export async function action({ request }) {
   const formData = await request.formData();
   const itemId = formData.get("itemId");
-  const itemType = formData.get("itemType"); // 'bundle' or 'volume'
+  const itemType = formData.get("itemType");
   const newStatus = formData.get("newStatus");
 
   try {
     if (itemType === "bundle") {
-      // If setting to published, first set all bundles to draft
       if (newStatus === "published") {
         await prisma.bundle.updateMany({
           where: {
@@ -70,7 +71,6 @@ export async function action({ request }) {
         });
       }
 
-      // Then update the selected bundle
       const updatedBundle = await prisma.bundle.update({
         where: {
           id: parseInt(itemId),
@@ -82,7 +82,6 @@ export async function action({ request }) {
 
       return json({ success: true, item: updatedBundle, type: "bundle" });
     } else if (itemType === "volume") {
-      // If setting to published, first set all volumes to draft
       if (newStatus === "published") {
         await prisma.volumeDiscount.updateMany({
           where: {
@@ -94,7 +93,6 @@ export async function action({ request }) {
         });
       }
 
-      // Then update the selected volume
       const updatedVolume = await prisma.volumeDiscount.update({
         where: {
           id: parseInt(itemId),
@@ -114,17 +112,31 @@ export async function action({ request }) {
 
 export default function Dashboard() {
   const { bundles, volumes } = useLoaderData();
-  console.log("Bundles:", bundles);
-  console.log("Volumes:", volumes);
 
+  // Banner states (keep existing banner for other notifications)
+  const [showBanner, setShowBanner] = useState(false);
+  const [bannerMessage, setBannerMessage] = useState("");
+  const [bannerTone, setBannerTone] = useState("info");
+
+  // Modal and popover states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activePopoverId, setActivePopoverId] = useState(null);
+
+  // Delete confirmation modal states
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
+
+  // Toast states
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastError, setToastError] = useState(false);
+
   const fetcher = useFetcher();
+  const deleteVolumeFetcher = useFetcher();
 
   const handleOpenModal = useCallback(() => setIsModalOpen(true), []);
   const handleCloseModal = useCallback(() => setIsModalOpen(false), []);
 
-  // Toggle popover for both bundle and volume actions
   const togglePopover = useCallback(
     (id) => {
       setActivePopoverId(activePopoverId === id ? null : id);
@@ -132,12 +144,10 @@ export default function Dashboard() {
     [activePopoverId],
   );
 
-  // Handle bundle status toggle
   const handleStatusToggle = useCallback(
     (itemId, currentStatus, itemType = "bundle") => {
       const newStatus = currentStatus === "published" ? "draft" : "published";
 
-      // Use fetcher to submit the form data
       fetcher.submit(
         {
           itemId: itemId.toString(),
@@ -150,7 +160,6 @@ export default function Dashboard() {
     [fetcher],
   );
 
-  // Handle volume status toggle
   const handleVolumeToggle = useCallback(
     (volumeId, currentStatus) => {
       handleStatusToggle(volumeId, currentStatus, "volume");
@@ -158,91 +167,195 @@ export default function Dashboard() {
     [handleStatusToggle],
   );
 
+  // Handle delete volume discount responses with Toast
+  useEffect(() => {
+    if (deleteVolumeFetcher.data) {
+      setToastMessage(deleteVolumeFetcher.data.message);
+      setToastError(!deleteVolumeFetcher.data.success);
+      setShowToast(true);
+
+      if (deleteVolumeFetcher.data.success) {
+        // Refresh the page data after successful deletion
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      }
+    }
+  }, [deleteVolumeFetcher.data]);
+
+  // Show delete confirmation modal
+  const showDeleteConfirmation = (volumeId, volumeName) => {
+    setItemToDelete({ id: volumeId, name: volumeName });
+    setIsDeleteModalOpen(true);
+  };
+
+  // Handle confirmed deletion
+  const handleConfirmDelete = () => {
+    if (itemToDelete) {
+      deleteVolumeFetcher.submit(
+        { volumeId: itemToDelete.id.toString() },
+        { method: "post", action: "/api/delete-volume-discount" },
+      );
+      setIsDeleteModalOpen(false);
+      setItemToDelete(null);
+    }
+  };
+
+  // Handle cancel deletion
+  const handleCancelDelete = () => {
+    setIsDeleteModalOpen(false);
+    setItemToDelete(null);
+  };
+
+  // Toast dismiss handler
+  const toggleToast = useCallback(
+    () => setShowToast((showToast) => !showToast),
+    [],
+  );
+
   return (
-    <Page title="Dashboard">
-      <Layout>
-        {/* Top Banner */}
-        <Layout.Section>
-          <Banner
-            title="Rapi app is not activated yet"
-            status="warning"
-            tone="warning"
-            onDismiss={() => {}}
-            action={{
-              content: "Activate",
-              onAction: () => {},
-            }}
-          >
-            <p>
-              Please activate the app by clicking 'Activate' button below and
-              then 'Save' in the following page.
-            </p>
-          </Banner>
-        </Layout.Section>
-
-        <Layout.Section>
-          <Analytics />
-        </Layout.Section>
-
-        {/* Middle Banner */}
-        <Layout.Section>
-          <Banner
-            title="Exciting news"
-            status="warning"
-            tone="info"
-            onDismiss={() => {}}
-          >
-            <p>
-              We just rolled out a highly requested feature in Rapi Bundle: Free
-              Gift.
-            </p>
-            <p>
-              From what we've seen, merchants who add a Free Gift to their
-              bundles see a 23% increase in revenue on average. You can enable
-              it in a few clicks — no dev required. Please contact us if you
-              have any question!
-            </p>
-          </Banner>
-        </Layout.Section>
-
-        <Layout.Section>
-          <InlineStack align="end">
-            <Button
-              variant="primary"
-              onClick={() => {
-                setIsModalOpen(true);
+    <Frame>
+      <Page title="Dashboard">
+        <Layout>
+          {/* Top Banner */}
+          <Layout.Section>
+            <Banner
+              title="Rapi app is not activated yet"
+              status="warning"
+              tone="warning"
+              onDismiss={() => {}}
+              action={{
+                content: "Activate",
+                onAction: () => {},
               }}
             >
-              Create a new bundle
-            </Button>
-          </InlineStack>
-        </Layout.Section>
+              <p>
+                Please activate the app by clicking 'Activate' button below and
+                then 'Save' in the following page.
+              </p>
+            </Banner>
+          </Layout.Section>
 
-        {/* Bundle & Volume Discount List */}
-        <Layout.Section>
-          <DashboardList
-            bundles={bundles}
-            volumes={volumes}
-            handleStatusToggle={handleStatusToggle}
-            handleVolumeToggle={handleVolumeToggle}
-            togglePopover={togglePopover}
-            activePopoverId={activePopoverId}
-            setActivePopoverId={setActivePopoverId}
-            EditIcon={EditIcon}
-            DeleteIcon={DeleteIcon}
-            DuplicateIcon={DuplicateIcon}
-            MenuHorizontalIcon={MenuHorizontalIcon}
+          <Layout.Section>
+            <Analytics />
+          </Layout.Section>
+
+          {/* Middle Banner */}
+          <Layout.Section>
+            <Banner
+              title="Exciting news"
+              status="warning"
+              tone="info"
+              onDismiss={() => {}}
+            >
+              <p>
+                We just rolled out a highly requested feature in Rapi Bundle:
+                Free Gift.
+              </p>
+              <p>
+                From what we've seen, merchants who add a Free Gift to their
+                bundles see a 23% increase in revenue on average. You can enable
+                it in a few clicks — no dev required. Please contact us if you
+                have any question!
+              </p>
+            </Banner>
+          </Layout.Section>
+
+          <Layout.Section>
+            <InlineStack align="end">
+              <Button
+                variant="primary"
+                onClick={() => {
+                  setIsModalOpen(true);
+                }}
+              >
+                Create a new bundle
+              </Button>
+            </InlineStack>
+          </Layout.Section>
+
+          {/* Bundle & Volume Discount List */}
+          {showBanner && (
+            <Banner
+              title={bannerMessage}
+              onDismiss={() => setShowBanner(false)}
+              tone={bannerTone}
+            />
+          )}
+          <Layout.Section>
+            <DashboardList
+              bundles={bundles}
+              volumes={volumes}
+              handleStatusToggle={handleStatusToggle}
+              handleVolumeToggle={handleVolumeToggle}
+              togglePopover={togglePopover}
+              activePopoverId={activePopoverId}
+              setActivePopoverId={setActivePopoverId}
+              EditIcon={EditIcon}
+              DeleteIcon={DeleteIcon}
+              MenuHorizontalIcon={MenuHorizontalIcon}
+              // Updated delete handler to show modal
+              onDeleteVolume={showDeleteConfirmation}
+              deleteVolumeLoading={deleteVolumeFetcher.state === "submitting"}
+            />
+          </Layout.Section>
+        </Layout>
+
+        <br />
+
+        {/* Bundle Type Selection Modal */}
+        <SelectionModel
+          isModalOpen={isModalOpen}
+          handleCloseModal={handleCloseModal}
+        />
+
+        {/* Delete Confirmation Modal */}
+        <Modal
+          open={isDeleteModalOpen}
+          onClose={handleCancelDelete}
+          title="Delete Volume Discount"
+          primaryAction={{
+            content: "Delete",
+            onAction: handleConfirmDelete,
+            destructive: true,
+            loading: deleteVolumeFetcher.state === "submitting",
+          }}
+          secondaryActions={[
+            {
+              content: "Cancel",
+              onAction: handleCancelDelete,
+            },
+          ]}
+        >
+          <Modal.Section>
+            <p>
+              Are you sure you want to delete{" "}
+              <strong>"{itemToDelete?.name}"</strong>?
+            </p>
+            <br />
+            <p>This will permanently remove:</p>
+            <ul style={{ marginLeft: "20px", marginTop: "8px" }}>
+              <li>The volume discount from your database</li>
+              <li>Associated metafield data</li>
+              <li>The Shopify automatic discount</li>
+            </ul>
+            <br />
+            <p>
+              <strong>This action cannot be undone.</strong>
+            </p>
+          </Modal.Section>
+        </Modal>
+
+        {/* Toast Notification */}
+        {showToast && (
+          <Toast
+            content={toastMessage}
+            onDismiss={toggleToast}
+            error={toastError}
+            duration={toastError ? 5000 : 3000}
           />
-        </Layout.Section>
-      </Layout>
-
-      <br />
-
-      {/* Bundle Type Selection Modal */}
-      <SelectionModel
-        isModalOpen={isModalOpen}
-        handleCloseModal={handleCloseModal}
-      />
-    </Page>
+        )}
+      </Page>
+    </Frame>
   );
 }

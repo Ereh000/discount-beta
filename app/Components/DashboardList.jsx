@@ -20,10 +20,12 @@ const DashboardList = ({
   setActivePopoverId,
   EditIcon,
   DeleteIcon,
-  DuplicateIcon,
   MenuHorizontalIcon,
+  onDeleteVolume,
+  deleteVolumeLoading,
 }) => {
-  // Render bundles
+  
+  // Render bundles (unchanged for now)
   const renderBundles = () => {
     if (!bundles || bundles.length === 0) return null;
 
@@ -75,12 +77,10 @@ const DashboardList = ({
               ></label>
             </div>
 
-            {/* Bundle name */}
             <Text variant="headingMd" as="h3">
               {bundle.name || "Bundle"}
             </Text>
 
-            {/* Position type */}
             <Text variant="bodyMd" as="span" color="subdued">
               {bundle.settings?.position === "all"
                 ? "All products"
@@ -95,17 +95,14 @@ const DashboardList = ({
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            {/* Product type */}
             <Text variant="bodyMd" as="span">
               Product Bundle
             </Text>
 
-            {/* Status badge */}
             <Badge tone={bundle.status === "published" ? "success" : "info"}>
               {bundle.status === "published" ? "Active" : "Draft"}
             </Badge>
 
-            {/* Three dots menu */}
             <div>
               <Popover
                 active={activePopoverId === `bundle-${bundle.id}`}
@@ -127,19 +124,11 @@ const DashboardList = ({
                       url: `/app/product-bundle/${bundle.id}`,
                     },
                     {
-                      content: "Duplicate",
-                      icon: DuplicateIcon,
-                      onAction: () => {
-                        console.log(`Duplicate bundle ${bundle.id}`);
-                        setActivePopoverId(null);
-                      },
-                    },
-                    {
                       content: "Delete",
                       icon: DeleteIcon,
                       destructive: true,
                       onAction: () => {
-                        console.log(`Delete bundle ${bundle.id}`);
+                        console.log(`Delete bundle ${bundle.id} - Coming soon!`);
                         setActivePopoverId(null);
                       },
                     },
@@ -153,7 +142,7 @@ const DashboardList = ({
     ));
   };
 
-  // Render volumes
+  // Updated renderVolumes function with modal-based delete
   const renderVolumes = () => {
     if (!volumes || volumes.length === 0) return null;
 
@@ -203,12 +192,10 @@ const DashboardList = ({
               ></label>
             </div>
 
-            {/* Volume name */}
             <Text variant="headingMd" as="h3">
               {volume.bundleName || "Volume Discount"}
             </Text>
 
-            {/* Visibility type */}
             <Text variant="bodyMd" as="span" color="subdued">
               {volume.settings?.bundleSettings?.visibilitySettings
                 ?.visibility === "all_products"
@@ -218,17 +205,15 @@ const DashboardList = ({
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            {/* Product type */}
             <Text variant="bodyMd" as="span">
               Volume Discount
             </Text>
 
-            {/* Status badge */}
             <Badge tone={volume.status === "published" ? "success" : "info"}>
               {volume.status === "published" ? "Active" : "Draft"}
             </Badge>
 
-            {/* Three dots menu */}
+            {/* Three dots menu - now triggers modal instead of confirm() */}
             <div>
               <Popover
                 active={activePopoverId === `volume-${volume.id}`}
@@ -247,23 +232,15 @@ const DashboardList = ({
                     {
                       content: "Edit",
                       icon: EditIcon,
-                      url: `/app/volume-discount/${volume.id}`, // This will work with the dynamic route
-                    },
-                    {
-                      content: "Duplicate",
-                      icon: DuplicateIcon,
-                      onAction: () => {
-                        console.log(`Duplicate volume ${volume.id}`);
-                        setActivePopoverId(null);
-                      },
+                      url: `/app/volume-discount/${volume.id}`,
                     },
                     {
                       content: "Delete",
                       icon: DeleteIcon,
                       destructive: true,
                       onAction: () => {
-                        console.log(`Delete volume ${volume.id}`);
                         setActivePopoverId(null);
+                        onDeleteVolume(volume.id, volume.bundleName);
                       },
                     },
                   ]}
