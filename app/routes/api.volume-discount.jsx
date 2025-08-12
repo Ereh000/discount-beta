@@ -52,7 +52,7 @@ export async function action({ request }) {
         },
       });
 
-      // Only update the discount for this specific bundle when editing
+      // Apply/Update discount for this bundle
       let discountResult = null;
       if (status === "published") {
         try {
@@ -62,10 +62,10 @@ export async function action({ request }) {
             isEdit
           );
           if (discountResult) {
-            console.log("Order discount function updated successfully:", discountResult);
+            console.log("Order discount function processed successfully:", discountResult);
           }
         } catch (discountError) {
-          console.error("Failed to update order discount function:", discountError);
+          console.error("Failed to process order discount function:", discountError);
         }
       }
 
@@ -74,7 +74,11 @@ export async function action({ request }) {
 
       let message = "Volume discount updated successfully!";
       if (discountResult) {
-        message += ` Discount "${discountResult.functionTitle}" ${discountResult.operation}d.`;
+        if (discountResult.wasExisting) {
+          message += ` Existing discount "${discountResult.functionTitle}" was updated.`;
+        } else {
+          message += ` New discount "${discountResult.functionTitle}" was created.`;
+        }
       }
 
       return json({ 
@@ -85,8 +89,6 @@ export async function action({ request }) {
       });
     } else {
       // Create new volume discount
-      // Don't set other volumes to draft - allow multiple published volumes
-      
       savedSettings = await prisma.volumeDiscount.create({
         data: {
           shop: shopId,
@@ -96,7 +98,7 @@ export async function action({ request }) {
         },
       });
 
-      // Create new discount for this specific bundle
+      // Apply/Update discount for this bundle (will update if name matches existing)
       let discountResult = null;
       if (status === "published") {
         try {
@@ -106,10 +108,10 @@ export async function action({ request }) {
             isEdit
           );
           if (discountResult) {
-            console.log("Order discount function created successfully:", discountResult);
+            console.log("Order discount function processed successfully:", discountResult);
           }
         } catch (discountError) {
-          console.error("Failed to create order discount function:", discountError);
+          console.error("Failed to process order discount function:", discountError);
         }
       }
 
@@ -118,7 +120,11 @@ export async function action({ request }) {
 
       let message = "Volume discount created successfully!";
       if (discountResult) {
-        message += ` Discount "${discountResult.functionTitle}" ${discountResult.operation}d.`;
+        if (discountResult.wasExisting) {
+          message += ` Updated existing discount "${discountResult.functionTitle}".`;
+        } else {
+          message += ` New discount "${discountResult.functionTitle}" was created.`;
+        }
       }
 
       return json({ 
@@ -138,6 +144,7 @@ export async function action({ request }) {
 }
 
 // ... rest of the loader function remains the same
+
 
 // ========== Remix Loader Function -----------
 export async function loader({ request }) {

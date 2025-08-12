@@ -39,7 +39,7 @@ export async function applyOrderDiscountFunction(admin, bundleName, isEdit = fal
 
     // Create unique discount title based on bundle name
     const discountTitle = `Volume Discount - ${bundleName}`;
-    console.log(`Using discount title: ${discountTitle}`);
+    console.log(`Looking for existing discount with title: ${discountTitle}`);
 
     // --- Check for Existing Discount ---
     const existingDiscountResponse = await admin.graphql(
@@ -68,6 +68,14 @@ export async function applyOrderDiscountFunction(admin, bundleName, isEdit = fal
 
     const existingDiscountData = await existingDiscountResponse.json();
     
+    // Log all discounts for debugging
+    console.log("All existing discounts:", existingDiscountData.data?.discountNodes?.edges.map(edge => ({
+      id: edge.node.id,
+      title: edge.node.discount?.title,
+      type: edge.node.discount?.__typename
+    })));
+
+    // Find discount with exact title match
     const existingDiscountNode = existingDiscountData.data?.discountNodes?.edges
       .find(edge => {
         const discount = edge.node.discount;
@@ -87,7 +95,7 @@ export async function applyOrderDiscountFunction(admin, bundleName, isEdit = fal
     let operationType;
 
     if (existingDiscountNode) {
-      // --- Update Existing Automatic Discount ---
+      // --- Update Existing Discount (whether edit mode or create mode) ---
       console.log(`Updating existing discount '${discountTitle}' with ID: ${existingDiscountNode.id}`);
       
       discountMutation = `mutation discountAutomaticAppUpdate($automaticAppDiscount: DiscountAutomaticAppInput!, $id: ID!) {
@@ -122,7 +130,7 @@ export async function applyOrderDiscountFunction(admin, bundleName, isEdit = fal
       };
       operationType = 'update';
     } else {
-      // --- Create New Automatic Discount ---
+      // --- Create New Automatic Discount (only if none exists) ---
       console.log(`No existing discount found. Creating new discount: '${discountTitle}'`);
       
       discountMutation = `mutation discountAutomaticAppCreate($automaticAppDiscount: DiscountAutomaticAppInput!) {
@@ -156,7 +164,7 @@ export async function applyOrderDiscountFunction(admin, bundleName, isEdit = fal
     }
 
     // --- Execute Create or Update Mutation ---
-    console.log(`Executing ${operationType} operation with variables:`, JSON.stringify(discountVariables, null, 2));
+    console.log(`Executing ${operationType} operation for '${discountTitle}'`);
     
     const automaticDiscountResponse = await admin.graphql(
       discountMutation,
@@ -175,7 +183,7 @@ export async function applyOrderDiscountFunction(admin, bundleName, isEdit = fal
       throw new Error(mutationResult.userErrors.map((e) => e.message).join(", "));
     } else if (mutationResult?.automaticAppDiscount) {
       const discountInfo = mutationResult.automaticAppDiscount;
-      console.log(`Successfully ${operationType}d Automatic Discount:`, discountInfo);
+      console.log(`Successfully ${operationType}d Automatic Discount '${discountTitle}':`, discountInfo);
       
       return {
         title: discountInfo.title,
@@ -183,7 +191,8 @@ export async function applyOrderDiscountFunction(admin, bundleName, isEdit = fal
         discountId: operationType === 'create' ? discountInfo.discountId : existingDiscountNode.id,
         appDiscountType: discountInfo.appDiscountType,
         operation: operationType,
-        functionTitle: discountTitle
+        functionTitle: discountTitle,
+        wasExisting: !!existingDiscountNode
       };
     } else {
       console.error(`Failed to ${operationType} Automatic Discount:`, discountResult);
