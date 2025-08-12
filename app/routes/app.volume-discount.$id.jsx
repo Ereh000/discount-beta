@@ -215,7 +215,7 @@ function MainVolumeDiscount() {
     advancedSettings: settings,
   };
 
-  console.log('allVolumeSettings:', allVolumeSettings);
+  // console.log('allVolumeSettings:', allVolumeSettings);
 
   // Save Settings to Database using separate API route
   const fetcher = useFetcher();

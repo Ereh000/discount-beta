@@ -59,7 +59,7 @@ model BundleProduct {
 
 model VolumeDiscount {
   id         Int      @id @default(autoincrement())
-  shop       String   @unique
+  shop       String   
   bundleName String? // Added for easier querying/display
   settings   Json
   status     String   @default("draft")

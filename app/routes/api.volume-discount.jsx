@@ -3,6 +3,7 @@ import prisma from "../db.server";
 import { json } from '@remix-run/node';
 import { fetchShop } from '../utils/getShop';
 import { saveOfferSettings } from '../utils/saveOfferSettings';
+import { applyOrderDiscountFunction } from '../utils/applyOrderDiscountFunction';
 
 // ========== Remix Action Function -----------
 export async function action({ request }) {
@@ -12,6 +13,9 @@ export async function action({ request }) {
   const status = formData.get("status");
   const volumeId = formData.get("volumeId");
   const isEdit = formData.get("isEdit") === "true";
+
+  console.log("isEdit:", isEdit);
+
 
   if (!volumeSettingsString) {
     return json({ success: false, message: "No volume settings data provided." }, { status: 400 });
@@ -23,15 +27,26 @@ export async function action({ request }) {
   try {
     const volumeSettings = JSON.parse(volumeSettingsString);
 
-    // console.log("offerSettings", volumeSettings?.offerSettings);
     // First save the offersettings to app metafields
     const metafield = await saveOfferSettings(request, shopId, volumeSettings?.offerSettings);
     
-    if(!metafield) {
+    if(!metafield) {  
       return json({ success: false, message: "Failed to save offer settings." }, { status: 500 });
     }
 
-    console.log("Metafield successfully!", metafield);
+    // Apply/Delete & Create order discount function when published (both new and edit)
+    let discountResult = null;
+    if (status === "published") {
+      try {
+        discountResult = await applyOrderDiscountFunction(admin, volumeSettings.bundleSettings.bundleName, isEdit);
+        if (discountResult) {
+          console.log("Order discount function processed successfully:", discountResult);
+        }
+      } catch (discountError) {
+        console.error("Failed to process order discount function:", discountError);
+        // Don't fail the entire operation, just log the error
+      }
+    }
 
     let savedSettings;
 
@@ -49,10 +64,26 @@ export async function action({ request }) {
         },
       });
 
+      let message = "Volume discount updated successfully!";
+      if (discountResult) {
+        switch (discountResult.operation) {
+          case 'delete_and_create':
+            message += " Discount refreshed (deleted old, created new).";
+            break;
+          case 'create':
+            message += " New discount created.";
+            break;
+          case 'found_existing':
+            message += " Using existing discount.";
+            break;
+        }
+      }
+
       return json({ 
         success: true, 
-        message: "Volume discount updated successfully!", 
-        data: savedSettings 
+        message: message,
+        data: savedSettings,
+        discountInfo: discountResult
       });
     } else {
       // Create new volume discount
@@ -78,10 +109,23 @@ export async function action({ request }) {
         },
       });
 
+      let message = "Volume discount created successfully!";
+      if (discountResult) {
+        switch (discountResult.operation) {
+          case 'create':
+            message += " New discount created.";
+            break;
+          case 'found_existing':
+            message += " Using existing discount.";
+            break;
+        }
+      }
+
       return json({ 
         success: true, 
-        message: "Volume discount created successfully!", 
-        data: savedSettings 
+        message: message,
+        data: savedSettings,
+        discountInfo: discountResult
       });
     }
   } catch (error) {
