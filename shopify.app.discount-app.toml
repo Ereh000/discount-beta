@@ -3,7 +3,7 @@
 client_id = "6151641bf090717bc67f80db6d2f9c01"
 name = "discount-app"
 handle = "discount-app-1172"
-application_url = "https://donated-reform-factory-roof.trycloudflare.com"
+application_url = "https://willow-penguin-fm-avenue.trycloudflare.com"
 embedded = true
 
 [build]
@@ -18,7 +18,7 @@ api_version = "2025-07"
 scopes = "read_products,write_discounts,read_discounts,write_discounts_allocator_functions,write_products"
 
 [auth]
-redirect_urls = ["https://donated-reform-factory-roof.trycloudflare.com/auth/callback", "https://donated-reform-factory-roof.trycloudflare.com/auth/shopify/callback", "https://donated-reform-factory-roof.trycloudflare.com/api/auth/callback"]
+redirect_urls = ["https://willow-penguin-fm-avenue.trycloudflare.com/auth/callback", "https://willow-penguin-fm-avenue.trycloudflare.com/auth/shopify/callback", "https://willow-penguin-fm-avenue.trycloudflare.com/api/auth/callback"]
 
 [pos]
 embedded = false

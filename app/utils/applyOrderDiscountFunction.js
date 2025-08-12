@@ -37,10 +37,11 @@ export async function applyOrderDiscountFunction(admin, bundleName, isEdit = fal
     const functionId = orderDiscountFunction.id;
     console.log(`Found function 'order-discount' with ID: ${functionId}`);
 
-    // Fixed discount title
-    const discountTitle = "order-discount";
+    // Create unique discount title based on bundle name
+    const discountTitle = `Volume Discount - ${bundleName}`;
+    console.log(`Using discount title: ${discountTitle}`);
 
-    // --- Check for Existing Discount using discountNodes with better search ---
+    // --- Check for Existing Discount ---
     const existingDiscountResponse = await admin.graphql(
       `query {
         discountNodes(first: 50) {
@@ -67,13 +68,6 @@ export async function applyOrderDiscountFunction(admin, bundleName, isEdit = fal
 
     const existingDiscountData = await existingDiscountResponse.json();
     
-    // Log all discounts for debugging
-    console.log("All discounts found:", existingDiscountData.data?.discountNodes?.edges.map(edge => ({
-      id: edge.node.id,
-      title: edge.node.discount?.title,
-      type: edge.node.discount?.__typename
-    })));
-
     const existingDiscountNode = existingDiscountData.data?.discountNodes?.edges
       .find(edge => {
         const discount = edge.node.discount;
@@ -189,7 +183,7 @@ export async function applyOrderDiscountFunction(admin, bundleName, isEdit = fal
         discountId: operationType === 'create' ? discountInfo.discountId : existingDiscountNode.id,
         appDiscountType: discountInfo.appDiscountType,
         operation: operationType,
-        functionTitle: "order-discount"
+        functionTitle: discountTitle
       };
     } else {
       console.error(`Failed to ${operationType} Automatic Discount:`, discountResult);

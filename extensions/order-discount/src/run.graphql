@@ -9,13 +9,8 @@ query RunInput {
       }
     }
   }
-  # discountNode {
-  #   metafield(namespace: "volume-discount", key: "offer-settings") {
-  #     jsonValue
-  #   }
-  # }
   shop {
-    metafield(namespace: "volume-discount", key: "offer-settings") {
+    metafield(namespace: "volume-discount", key: "all-offers") {
       value
     }
   }
