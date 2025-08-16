@@ -1,3 +1,5 @@
+<!-- extensions/product-bundle/blocks/volume-discount.liquid -->
+
 <div class="vd-volume-bundle" style="display: none;">
   <div class="vs-container">
     <!-- Content will be dynamically generated -->
@@ -30,6 +32,17 @@
     // Get shop URL from Shopify global
     const shopUrl = `https://${window.Shopify.shop}`;
 
+    // Get current product data
+    const productData = {
+      price: {{ product.price | money_without_currency | json }},
+      id: {{ product.id | json }},
+      handle: {{ product.handle | json }},
+      variants: {{ product.variants | json }}
+    };
+
+    let selectedOfferIndex = 0;
+    let currentVolumeData = null;
+
     // Helper to convert RGBA object to CSS rgba() string
     const rgbaToString = (color) => {
       if (
@@ -60,23 +73,51 @@
       }
     };
 
-    // Helper to calculate price based on offer settings
+    // Helper to format price
+    const formatPrice = (price) => {
+      if (typeof price === 'string' && price.includes('₹')) {
+        return price;
+      }
+      return `₹${parseFloat(price).toFixed(2)}`;
+    };
+
+    // Helper to calculate discounted price
     const calculatePrice = (offer, basePrice) => {
-      if (!offer) return basePrice;
+      if (!offer || !offer.priceAmount || offer.priceAmount === "") {
+        return basePrice;
+      }
+
+      const discountValue = parseFloat(offer.priceAmount);
       
-      const quantity = parseInt(offer.quantity) || 1;
-      let totalPrice = basePrice * quantity;
-      
-      // Apply discount based on priceValue
-      if (offer.priceValue === 'discount_percentage' && offer.priceAmount) {
-        const discountPercent = parseFloat(offer.priceAmount) || 0;
-        totalPrice = totalPrice * (1 - discountPercent / 100);
-      } else if (offer.priceValue === 'fixed_amount' && offer.priceAmount) {
-        const fixedAmount = parseFloat(offer.priceAmount) || 0;
-        totalPrice = fixedAmount * quantity;
+      if (offer.priceValue === "discount_percentage") {
+        return basePrice - (basePrice * discountValue / 100);
+      } else if (offer.priceValue === "fixed_amount") {
+        return Math.max(0, basePrice - discountValue);
       }
       
-      return Math.round(totalPrice);
+      return basePrice;
+    };
+
+    // Helper to generate pricing for offers
+    const generateOfferPricing = (offer) => {
+      const basePricePerItem = parseFloat(productData.price) || 100;
+      const quantity = parseInt(offer.quantity) || 1;
+      const totalBasePrice = basePricePerItem * quantity;
+      
+      if (offer.priceAmount && offer.priceAmount !== "") {
+        const discountedPrice = calculatePrice(offer, totalBasePrice);
+        return {
+          price: discountedPrice,
+          compareAtPrice: totalBasePrice > discountedPrice ? totalBasePrice : null,
+          pricePerItem: discountedPrice / quantity
+        };
+      }
+      
+      return { 
+        price: totalBasePrice, 
+        compareAtPrice: null,
+        pricePerItem: basePricePerItem
+      };
     };
 
     // Main fetch and render function
@@ -97,16 +138,17 @@
             return hideVolumeBlock();
           }
 
-          // Get the first (and likely only) volume discount
-          // Filter for published ones if needed
+          // Get published volumes
           const publishedVolumes = data.data.filter(volume => volume.status === 'published');
-          const volumeData = publishedVolumes.length > 0 ? publishedVolumes[0] : data.data;
+          const volumeData = publishedVolumes.length > 0 ? publishedVolumes[0] : data.data[0];
 
           if (!volumeData || !volumeData.settings) {
             console.warn('Volume discount settings not found.');
             return hideVolumeBlock();
           }
 
+          currentVolumeData = volumeData;
+          selectedOfferIndex = volumeData.settings.offerSettings?.selectedOfferIndex || 0;
           renderVolumeDiscount(volumeData);
         })
         .catch((error) => {
@@ -151,7 +193,10 @@
       renderHeader(vdContainer, bundleSettings, designSettings);
 
       // 2. Render Offers
-      renderOffers(vdContainer, offerSettings, bundleSettings, designSettings);
+      renderOffers(vdContainer, offerSettings, bundleSettings, designSettings, advancedSettings);
+
+      // 3. Render Add to Cart Button
+      renderAddToCartButton(vdContainer, offerSettings);
 
       // Show the block
       showVolumeBlock();
@@ -160,18 +205,24 @@
     // Function to render header
     const renderHeader = (container, bundleSettings, designSettings) => {
       const headerDiv = document.createElement('div');
-      headerDiv.style.display = 'flex';
-      headerDiv.style.alignItems = 'center';
-      headerDiv.style.justifyContent = bundleSettings?.headerSettings?.alignment === 'left' ? 'flex-start' : 
-                                       bundleSettings?.headerSettings?.alignment === 'right' ? 'flex-end' : 'center';
-      headerDiv.style.gap = '10px';
-      headerDiv.style.marginBottom = '16px';
+      headerDiv.style.cssText = `
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 16px;
+      `;
 
       const headerTextDiv = document.createElement('div');
       headerTextDiv.className = 'preview-header';
-      headerTextDiv.style.color = rgbaToString(designSettings?.textColors?.header);
-      headerTextDiv.style.fontSize = `${designSettings?.typographySettings?.header?.size || 16}px`;
-      headerTextDiv.style.fontWeight = getFontWeight(designSettings?.typographySettings?.header?.fontStyle);
+      headerTextDiv.style.cssText = `
+        text-align: ${bundleSettings?.headerSettings?.alignment || 'center'};
+        color: ${rgbaToString(designSettings?.textColors?.header)};
+        font-size: ${designSettings?.typographySettings?.header?.size || 16}px;
+        font-weight: ${getFontWeight(designSettings?.typographySettings?.header?.fontStyle)};
+        white-space: nowrap;
+        padding: 0 16px;
+      `;
       headerTextDiv.textContent = bundleSettings?.headerSettings?.headerText || 'Choose your offer';
 
       if (bundleSettings?.headerSettings?.headerLine) {
@@ -179,14 +230,18 @@
         const lineColor = rgbaToString(designSettings?.backgroundColors?.border);
         
         const leftLine = document.createElement('span');
-        leftLine.style.flex = '1 1 0%';
-        leftLine.style.height = `${lineThickness}px`;
-        leftLine.style.background = lineColor;
+        leftLine.style.cssText = `
+          flex: 1;
+          height: ${lineThickness}px;
+          background: ${lineColor};
+        `;
         
         const rightLine = document.createElement('span');
-        rightLine.style.flex = '1 1 0%';
-        rightLine.style.height = `${lineThickness}px`;
-        rightLine.style.background = lineColor;
+        rightLine.style.cssText = `
+          flex: 1;
+          height: ${lineThickness}px;
+          background: ${lineColor};
+        `;
 
         headerDiv.appendChild(leftLine);
         headerDiv.appendChild(headerTextDiv);
@@ -199,7 +254,7 @@
     };
 
     // Function to render offers
-    const renderOffers = (container, offerSettings, bundleSettings, designSettings) => {
+    const renderOffers = (container, offerSettings, bundleSettings, designSettings, advancedSettings) => {
       if (!offerSettings?.offers || !Array.isArray(offerSettings.offers)) {
         console.warn('No offers found in volume discount settings.');
         return;
@@ -209,8 +264,8 @@
       offersContainer.className = 'offers-container';
 
       offerSettings.offers.forEach((offer, index) => {
-        const isSelected = index === (offerSettings?.selectedOfferIndex || 0);
-        const offerItem = createOfferItem(offer, index, isSelected, bundleSettings, designSettings);
+        const isSelected = index === selectedOfferIndex;
+        const offerItem = createOfferItem(offer, index, isSelected, bundleSettings, designSettings, advancedSettings);
         offersContainer.appendChild(offerItem);
       });
 
@@ -218,7 +273,7 @@
     };
 
     // Function to create individual offer item
-    const createOfferItem = (offer, index, isSelected, bundleSettings, designSettings) => {
+    const createOfferItem = (offer, index, isSelected, bundleSettings, designSettings, advancedSettings) => {
       const offerItem = document.createElement('div');
       offerItem.className = 'offer-item';
       offerItem.style.cssText = `
@@ -238,7 +293,7 @@
         align-items: center;
         position: relative;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: all 0.2s ease;
       `;
 
       // Add click handler for offer selection
@@ -246,11 +301,13 @@
 
       // Left content (checkmark + text)
       const leftContent = document.createElement('div');
-      leftContent.style.display = 'flex';
-      leftContent.style.alignItems = 'center';
+      leftContent.style.cssText = 'display: flex; align-items: center;';
 
       // Add checkmark if enabled
-      if (bundleSettings?.checkmarkSettings?.checkmarkVisibility === 'show') {
+      const showRadioButtons = bundleSettings?.checkmarkSettings?.checkmarkVisibility === "show" || 
+                             bundleSettings?.checkmarkSettings?.checkmarkVisibility === "showRadio";
+      
+      if (showRadioButtons) {
         const checkmark = createCheckmark(isSelected, designSettings);
         leftContent.appendChild(checkmark);
       }
@@ -262,12 +319,12 @@
       offerItem.appendChild(leftContent);
 
       // Right content (price)
-      const rightContent = createPriceContent(offer, designSettings);
+      const rightContent = createPriceContent(offer, designSettings, advancedSettings);
       offerItem.appendChild(rightContent);
 
       // Add highlight tag if applicable
       if (offer?.highlight && offer?.highlightSettings?.text) {
-        const highlightTag = createHighlightTag(offer, designSettings);
+        const highlightTag = createHighlightTag(offer, designSettings, bundleSettings);
         offerItem.appendChild(highlightTag);
       }
 
@@ -286,6 +343,7 @@
         display: flex;
         justify-content: center;
         align-items: center;
+        background-color: ${isSelected ? rgbaToString(designSettings?.backgroundColors?.checkmark) : 'transparent'};
       `;
 
       if (isSelected) {
@@ -294,7 +352,7 @@
           width: 12px;
           height: 12px;
           border-radius: 50%;
-          background-color: ${rgbaToString(designSettings?.backgroundColors?.checkmark)};
+          background-color: ${rgbaToString(designSettings?.textColors?.highlight) || '#5C3D99'};
         `;
         checkmarkDiv.appendChild(innerCheckmark);
       }
@@ -311,7 +369,7 @@
         color: ${rgbaToString(designSettings?.textColors?.title)};
         font-size: ${designSettings?.typographySettings?.titlePrice?.size || 16}px;
         font-weight: ${getFontWeight(designSettings?.typographySettings?.titlePrice?.fontStyle)};
-        margin-bottom: 2px;
+        margin-bottom: 4px;
       `;
       titleDiv.textContent = offer?.title || '';
 
@@ -330,33 +388,62 @@
     };
 
     // Function to create price content
-    const createPriceContent = (offer, designSettings) => {
+    const createPriceContent = (offer, designSettings, advancedSettings) => {
       const rightContent = document.createElement('div');
       rightContent.style.textAlign = 'right';
 
-      const basePrice = {{ product.price |  money_without_currency |  json }};
-      console.log("basePrice", basePrice)
+      const pricing = generateOfferPricing(offer);
 
-
-      const price = calculatePrice(offer, basePrice);
+      // Show price per item if enabled
+      if (advancedSettings?.pricing?.showPricesPerItem) {
+        const pricePerItemDiv = document.createElement('div');
+        pricePerItemDiv.style.cssText = `
+          color: ${rgbaToString(designSettings?.textColors?.subtitle)};
+          font-size: ${parseInt(designSettings?.typographySettings?.subtitleComparedPrice?.size || 14) - 2}px;
+          margin-bottom: 2px;
+        `;
+        pricePerItemDiv.textContent = `${formatPrice(pricing.pricePerItem)} each`;
+        rightContent.appendChild(pricePerItemDiv);
+      }
       
+      // Main price
       const priceDiv = document.createElement('div');
       priceDiv.style.cssText = `
         color: ${rgbaToString(designSettings?.pricingColors?.price)};
         font-size: ${designSettings?.typographySettings?.titlePrice?.size || 16}px;
         font-weight: ${getFontWeight(designSettings?.typographySettings?.titlePrice?.fontStyle)};
       `;
-      priceDiv.textContent = `₹${price}`;
-
+      priceDiv.textContent = formatPrice(pricing.price);
       rightContent.appendChild(priceDiv);
+
+      // Compare at price if enabled and available
+      if (pricing.compareAtPrice && advancedSettings?.pricing?.showCompareAtPrice) {
+        const compareAtPriceDiv = document.createElement('div');
+        compareAtPriceDiv.style.cssText = `
+          color: ${rgbaToString(designSettings?.pricingColors?.comparedPrice)};
+          font-size: ${designSettings?.typographySettings?.subtitleComparedPrice?.size || 14}px;
+          font-weight: ${getFontWeight(designSettings?.typographySettings?.subtitleComparedPrice?.fontStyle)};
+          text-decoration: line-through;
+        `;
+        compareAtPriceDiv.textContent = formatPrice(pricing.compareAtPrice);
+        rightContent.appendChild(compareAtPriceDiv);
+      }
+
       return rightContent;
     };
 
     // Function to create highlight tag
-    const createHighlightTag = (offer, designSettings) => {
+    const createHighlightTag = (offer, designSettings, bundleSettings) => {
       const highlightTag = document.createElement('div');
       const shape = offer?.highlightSettings?.shape || 'rounded';
-      const borderRadius = shape === 'rounded' ? '12px' : shape === 'sharp' ? '0px' : '6px';
+      const style = offer?.highlightSettings?.style || 'pill';
+      
+      let borderRadius = '12px';
+      if (style === 'rectangle') {
+        borderRadius = '4px';
+      } else if (shape === 'square') {
+        borderRadius = '2px';
+      }
 
       highlightTag.style.cssText = `
         position: absolute;
@@ -369,46 +456,60 @@
         font-size: ${designSettings?.typographySettings?.tagHighlight?.size || 12}px;
         font-weight: ${getFontWeight(designSettings?.typographySettings?.tagHighlight?.fontStyle)};
         z-index: 1;
-        ${offer?.highlightSettings?.blinking ? 'animation: blink 1s infinite;' : ''}
+        ${offer?.highlightSettings?.blinking ? 'animation: blink 1s linear infinite;' : ''}
       `;
       highlightTag.textContent = offer?.highlightSettings?.text || '';
 
       return highlightTag;
     };
 
-    // Function to handle offer selection
-    const selectOffer = (selectedIndex) => {
-      console.log('Selected offer index:', selectedIndex);
+    // Function to render add to cart button
+    const renderAddToCartButton = (container, offerSettings) => {
+      const buttonDiv = document.createElement('button');
+      buttonDiv.style.cssText = `
+        margin-top: 16px;
+        background-color: #f0f0f0;
+        color: #999;
+        border: none;
+        padding: 14px;
+        border-radius: 6px;
+        cursor: not-allowed;
+        text-align: center;
+        font-size: 16px;
+        font-weight: 600;
+        width: 100%;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      `;
+      buttonDiv.textContent = 'ADD TO CART';
       
-      // Update visual selection
-      const offerItems = document.querySelectorAll('.offer-item');
-      offerItems.forEach((item, index) => {
-        const isSelected = index === selectedIndex;
-        
-        // Update checkmark
-        const checkmark = item.querySelector('div > div:first-child');
-        if (checkmark && checkmark.style.borderRadius === '50%') {
-          const inner = checkmark.querySelector('div');
-          if (isSelected && !inner) {
-            const innerCheckmark = document.createElement('div');
-            innerCheckmark.style.cssText = `
-              width: 12px;
-              height: 12px;
-              border-radius: 50%;
-              background-color: rgba(0, 0, 0, 1);
-            `;
-            checkmark.appendChild(innerCheckmark);
-          } else if (!isSelected && inner) {
-            checkmark.removeChild(inner);
-          }
-        }
+      // Add click handler (you can implement actual cart functionality here)
+      buttonDiv.addEventListener('click', () => {
+        console.log('Add to cart clicked', {
+          selectedOfferIndex,
+          selectedOffer: offerSettings?.offers?.[selectedOfferIndex]
+        });
+        // Implement your cart logic here
       });
 
-      // Here you would typically update the cart or trigger other actions
-      // For now, we'll just log the selection
+      container.appendChild(buttonDiv);
     };
 
-    // Add CSS for blinking animation
+    // Function to handle offer selection
+    const selectOffer = (newSelectedIndex) => {
+      console.log('Selected offer index:', newSelectedIndex);
+      
+      if (newSelectedIndex === selectedOfferIndex) return;
+      
+      selectedOfferIndex = newSelectedIndex;
+      
+      // Re-render the volume discount with new selection
+      if (currentVolumeData) {
+        renderVolumeDiscount(currentVolumeData);
+      }
+    };
+
+    // Add CSS for animations and hover effects
     const style = document.createElement('style');
     style.textContent = `
       @keyframes blink {
@@ -419,6 +520,11 @@
       .offer-item:hover {
         transform: translateY(-2px);
         box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      }
+      
+      .vd-volume-bundle {
+        margin: 20px 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
       }
     `;
     document.head.appendChild(style);
