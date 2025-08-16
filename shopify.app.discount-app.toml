@@ -3,7 +3,7 @@
 client_id = "6151641bf090717bc67f80db6d2f9c01"
 name = "discount-app"
 handle = "discount-app-1172"
-application_url = "https://consolidation-shoppers-potter-massage.trycloudflare.com"
+application_url = "https://blame-productive-sapphire-hunter.trycloudflare.com"
 embedded = true
 
 [build]
@@ -18,7 +18,7 @@ api_version = "2025-07"
 scopes = "read_products,write_discounts,read_discounts,write_discounts_allocator_functions,write_products"
 
 [auth]
-redirect_urls = ["https://consolidation-shoppers-potter-massage.trycloudflare.com/auth/callback", "https://consolidation-shoppers-potter-massage.trycloudflare.com/auth/shopify/callback", "https://consolidation-shoppers-potter-massage.trycloudflare.com/api/auth/callback"]
+redirect_urls = ["https://blame-productive-sapphire-hunter.trycloudflare.com/auth/callback", "https://blame-productive-sapphire-hunter.trycloudflare.com/auth/shopify/callback", "https://blame-productive-sapphire-hunter.trycloudflare.com/api/auth/callback"]
 
 [pos]
 embedded = false

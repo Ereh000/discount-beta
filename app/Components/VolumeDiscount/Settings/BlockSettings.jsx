@@ -1,226 +1,349 @@
-import { BlockStack, Card, Checkbox, Grid, RadioButton, RangeSlider, Select, Text, TextField } from '@shopify/polaris'
-import React from 'react'
-import { useCallback } from 'react';
+// Components/VolumeDiscount/Settings/BlockSettings.jsx
+import {
+  BlockStack,
+  Card,
+  Checkbox,
+  Grid,
+  RadioButton,
+  RangeSlider,
+  Select,
+  Text,
+  TextField,
+} from "@shopify/polaris";
+import { useCallback } from "react";
 
-function BlockSettings({
-    // Block Tab Props
-    bundleName,
-    setBundleName,
-    visibilitySettings,
-    setVisibilitySettings,
-    headerSettings,
-    setHeaderSettings,
-    shapeSettings,
-    setShapeSettings,
-    spacingSettings,
-    setSpacingSettings,
-    checkmarkSettings,
-    setCheckmarkSettings,
-    // End of Block Tab Props
-}) {
+// Constants
+const VISIBILITY_OPTIONS = [
+  { label: "All products", value: "all_products" },
+  { label: "Specific products", value: "specific_products" },
+  { label: "Specific collections", value: "specific_collections" },
+];
 
-    // Handlers updated to modify state objects
-    const handleVisibilityChange = useCallback((value) => {
-        setVisibilitySettings(prevSettings => ({ ...prevSettings, visibility: value }));
-    }, []);
+const ALIGNMENT_OPTIONS = [
+  { label: "Left", value: "left" },
+  { label: "Center", value: "center" },
+  { label: "Right", value: "right" },
+];
 
-    const handleHeaderTextChange = useCallback((value) => {
-        setHeaderSettings(prevSettings => ({ ...prevSettings, headerText: value }));
-    }, []);
+const SLIDER_CONFIGS = {
+  lineThickness: { min: 0, max: 10 },
+  blockRadius: { min: 0, max: 20 },
+  blockThickness: { min: 0, max: 10 },
+  spacing: { min: 0, max: 30 },
+};
 
-    const handleAlignmentChange = useCallback((value) => {
-        setHeaderSettings(prevSettings => ({ ...prevSettings, alignment: value }));
-    }, []);
-
-    const handleHeaderLineChange = useCallback((value) => {
-        setHeaderSettings(prevSettings => ({ ...prevSettings, headerLine: value }));
-    }, []);
-
-    const handleLineThicknessChange = useCallback((value) => {
-        setHeaderSettings(prevSettings => ({ ...prevSettings, lineThickness: value }));
-    }, []);
-
-    const handleBlockRadiusChange = useCallback((value) => {
-        setShapeSettings(prevSettings => ({ ...prevSettings, blockRadius: value }));
-    }, []);
-
-    const handleBlockThicknessChange = useCallback((value) => {
-        setShapeSettings(prevSettings => ({ ...prevSettings, blockThickness: value }));
-    }, []);
-
-    const handleSpacingTopChange = useCallback((value) => {
-        setSpacingSettings(prevSettings => ({ ...prevSettings, spacingTop: value }));
-    }, []);
-
-    const handleSpacingBottomChange = useCallback((value) => {
-        setSpacingSettings(prevSettings => ({ ...prevSettings, spacingBottom: value }));
-    }, []);
-
-    const handleCheckmarkVisibilityChange = useCallback((_checked, value) => {
-        setCheckmarkSettings(prevSettings => ({ ...prevSettings, checkmarkVisibility: value }));
-    }, []);
-
-
-    // Options remain the same
-    const visibilityOptions = [
-        { label: 'All products', value: 'all_products' },
-        { label: 'Specific products', value: 'specific_products' },
-        { label: 'Specific collections', value: 'specific_collections' },
-    ];
-
-    const alignmentOptions = [
-        { label: 'Left', value: 'left' },
-        { label: 'Center', value: 'center' },
-        { label: 'Right', value: 'right' },
-    ];
-
-    return (
-        <div>
-            <BlockStack gap={200}>
-                {/* Bundle Name */}
-                <Card>
-                    <TextField
-                        label="Bundle Name" // Label is handled by the Text component above
-                        value={bundleName}
-                        onChange={(value) => setBundleName(value)}
-                    />
-                </Card>
-                {/* Visiblity */}
-                <Card>
-                    <Select
-                        label="Visibility" // Label is handled by the Text component above
-                        options={visibilityOptions}
-                        onChange={handleVisibilityChange}
-                        value={visibilitySettings.visibility} // Read from state object
-                    />
-                </Card>
-
-                {/* Header Settings */}
-                <Card>
-                    <BlockStack gap={400}> {/* Use BlockStack for vertical spacing within the card */}
-                        <Grid> {/* Use Grid for horizontal layout */}
-                            <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 6, xl: 6 }}> {/* Adjust column span as needed */}
-                                <TextField
-                                    label="Header Text"
-                                    value={headerSettings.headerText} // Read from state object
-                                    onChange={handleHeaderTextChange}
-                                />
-                            </Grid.Cell>
-                            <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 6, xl: 6 }}> {/* Adjust column span as needed */}
-                                <Select
-                                    label="Alignment"
-                                    options={alignmentOptions}
-                                    onChange={handleAlignmentChange}
-                                    value={headerSettings.alignment} // Read from state object
-                                />
-                            </Grid.Cell>
-                        </Grid>
-                        <BlockStack gap={200}>
-                            <Text fontWeight="bold">Header line</Text>
-                            <Checkbox
-                                label="Add a line to the header title"
-                                checked={headerSettings.headerLine} // Read from state object
-                                onChange={handleHeaderLineChange}
-                            />
-                        </BlockStack>
-                        {headerSettings.headerLine && ( // Conditionally render based on state object
-                            <RangeSlider
-                                label="Line thickness"
-                                value={headerSettings.lineThickness} // Read from state object
-                                onChange={handleLineThicknessChange}
-                                min={0}
-                                max={10} // Adjust max value as needed
-                                output
-                            />
-                        )}
-                    </BlockStack>
-                </Card>
-
-                {/* Shape, Spacing, and Checkmark Settings */}
-                <Card>
-                    <BlockStack gap={400}>
-                        {/* Shape */}
-                        <BlockStack gap={200}>
-                            <Text fontWeight="bold">Shape</Text>
-                            <Grid>
-                                <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 6, xl: 6 }}>
-                                    <RangeSlider
-                                        label="Block radius"
-                                        value={shapeSettings.blockRadius} // Read from state object
-                                        onChange={handleBlockRadiusChange}
-                                        min={0}
-                                        max={20} // Adjust max value as needed
-                                        output
-                                    />
-                                </Grid.Cell>
-                                <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 6, xl: 6 }}>
-                                    <RangeSlider
-                                        label="Block Thickness"
-                                        value={shapeSettings.blockThickness} // Read from state object
-                                        onChange={handleBlockThicknessChange}
-                                        min={0}
-                                        max={10} // Adjust max value as needed
-                                        output
-                                    />
-                                </Grid.Cell>
-                            </Grid>
-                        </BlockStack>
-
-                        {/* Spacing */}
-                        <BlockStack gap={200}>
-                            <Text fontWeight="bold">Spacing</Text>
-                            <Grid>
-                                <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 6, xl: 6 }}>
-                                    <RangeSlider
-                                        label="Top"
-                                        value={spacingSettings.spacingTop} // Read from state object
-                                        onChange={handleSpacingTopChange}
-                                        min={0}
-                                        max={30} // Adjust max value as needed
-                                        output
-                                    />
-                                </Grid.Cell>
-                                <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 6, xl: 6 }}>
-                                    <RangeSlider
-                                        label="Bottom"
-                                        value={spacingSettings.spacingBottom} // Read from state object
-                                        onChange={handleSpacingBottomChange}
-                                        min={0}
-                                        max={30} // Adjust max value as needed
-                                        output
-                                    />
-                                </Grid.Cell>
-                            </Grid>
-                        </BlockStack>
-
-                        {/* Checkmark */}
-                        <BlockStack gap={200}>
-                            <Text fontWeight="bold">Checkmark</Text>
-                            <BlockStack gap={200} direction="horizontal"> {/* Use horizontal BlockStack for radio buttons */}
-                                <RadioButton
-                                    label="Show radio"
-                                    checked={checkmarkSettings.checkmarkVisibility === 'show'} // Read from state object
-                                    id="showRadio"
-                                    name="checkmarkVisibility"
-                                    onChange={handleCheckmarkVisibilityChange}
-                                    value="show"
-                                />
-                                <RadioButton
-                                    label="Hide radio"
-                                    checked={checkmarkSettings.checkmarkVisibility === 'hide'} // Read from state object
-                                    id="hideRadio"
-                                    name="checkmarkVisibility"
-                                    onChange={handleCheckmarkVisibilityChange}
-                                    value="hide"
-                                />
-                            </BlockStack>
-                        </BlockStack>
-                    </BlockStack>
-                </Card>
-
-            </BlockStack>
-        </div>
-    )
+// Custom hooks for state management
+function useVisibilityHandlers(setVisibilitySettings) {
+  return {
+    handleVisibilityChange: useCallback(
+      (value) => {
+        setVisibilitySettings((prev) => ({ ...prev, visibility: value }));
+      },
+      [setVisibilitySettings],
+    ),
+  };
 }
 
-export default BlockSettings
+function useHeaderHandlers(setHeaderSettings) {
+  return {
+    handleHeaderTextChange: useCallback(
+      (value) => {
+        setHeaderSettings((prev) => ({ ...prev, headerText: value }));
+      },
+      [setHeaderSettings],
+    ),
+
+    handleAlignmentChange: useCallback(
+      (value) => {
+        setHeaderSettings((prev) => ({ ...prev, alignment: value }));
+      },
+      [setHeaderSettings],
+    ),
+
+    handleHeaderLineChange: useCallback(
+      (value) => {
+        setHeaderSettings((prev) => ({ ...prev, headerLine: value }));
+      },
+      [setHeaderSettings],
+    ),
+
+    handleLineThicknessChange: useCallback(
+      (value) => {
+        setHeaderSettings((prev) => ({ ...prev, lineThickness: value }));
+      },
+      [setHeaderSettings],
+    ),
+  };
+}
+
+function useShapeHandlers(setShapeSettings) {
+  return {
+    handleBlockRadiusChange: useCallback(
+      (value) => {
+        setShapeSettings((prev) => ({ ...prev, blockRadius: value }));
+      },
+      [setShapeSettings],
+    ),
+
+    handleBlockThicknessChange: useCallback(
+      (value) => {
+        setShapeSettings((prev) => ({ ...prev, blockThickness: value }));
+      },
+      [setShapeSettings],
+    ),
+  };
+}
+
+function useSpacingHandlers(setSpacingSettings) {
+  return {
+    handleSpacingTopChange: useCallback(
+      (value) => {
+        setSpacingSettings((prev) => ({ ...prev, spacingTop: value }));
+      },
+      [setSpacingSettings],
+    ),
+
+    handleSpacingBottomChange: useCallback(
+      (value) => {
+        setSpacingSettings((prev) => ({ ...prev, spacingBottom: value }));
+      },
+      [setSpacingSettings],
+    ),
+  };
+}
+
+function useCheckmarkHandlers(setCheckmarkSettings) {
+  return {
+    handleCheckmarkVisibilityChange: useCallback(
+      (_, value) => {
+        setCheckmarkSettings((prev) => ({
+          ...prev,
+          checkmarkVisibility: value,
+        }));
+      },
+      [setCheckmarkSettings],
+    ),
+  };
+}
+
+// Sub-components for better organization
+function BundleNameSection({ bundleName, setBundleName }) {
+  return (
+    <Card>
+      <TextField
+        label="Bundle Name"
+        value={bundleName}
+        onChange={setBundleName}
+        autoComplete="off"
+      />
+    </Card>
+  );
+}
+
+function VisibilitySection({ visibilitySettings, handlers }) {
+  return (
+    <Card>
+      <Select
+        label="Visibility"
+        options={VISIBILITY_OPTIONS}
+        onChange={handlers.handleVisibilityChange}
+        value={visibilitySettings.visibility}
+      />
+    </Card>
+  );
+}
+
+function HeaderSection({ headerSettings, handlers }) {
+  return (
+    <Card>
+      <BlockStack gap="400">
+        <Grid>
+          <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 6, xl: 6 }}>
+            <TextField
+              label="Header Text"
+              value={headerSettings.headerText}
+              onChange={handlers.handleHeaderTextChange}
+              autoComplete="off"
+            />
+          </Grid.Cell>
+          <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 6, xl: 6 }}>
+            <Select
+              label="Alignment"
+              options={ALIGNMENT_OPTIONS}
+              onChange={handlers.handleAlignmentChange}
+              value={headerSettings.alignment}
+            />
+          </Grid.Cell>
+        </Grid>
+
+        <BlockStack gap="200">
+          <Text variant="headingMd">Header line</Text>
+          <Checkbox
+            label="Add a line to the header title"
+            checked={headerSettings.headerLine}
+            onChange={handlers.handleHeaderLineChange}
+          />
+        </BlockStack>
+
+        {headerSettings.headerLine && (
+          <RangeSlider
+            label="Line thickness"
+            value={headerSettings.lineThickness}
+            onChange={handlers.handleLineThicknessChange}
+            min={SLIDER_CONFIGS.lineThickness.min}
+            max={SLIDER_CONFIGS.lineThickness.max}
+            output
+          />
+        )}
+      </BlockStack>
+    </Card>
+  );
+}
+
+function ShapeSection({ shapeSettings, handlers }) {
+  return (
+    <BlockStack gap="200">
+      <Text variant="headingMd">Shape</Text>
+      <Grid>
+        <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 6, xl: 6 }}>
+          <RangeSlider
+            label="Block radius"
+            value={shapeSettings.blockRadius}
+            onChange={handlers.handleBlockRadiusChange}
+            min={SLIDER_CONFIGS.blockRadius.min}
+            max={SLIDER_CONFIGS.blockRadius.max}
+            output
+          />
+        </Grid.Cell>
+        <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 6, xl: 6 }}>
+          <RangeSlider
+            label="Block thickness"
+            value={shapeSettings.blockThickness}
+            onChange={handlers.handleBlockThicknessChange}
+            min={SLIDER_CONFIGS.blockThickness.min}
+            max={SLIDER_CONFIGS.blockThickness.max}
+            output
+          />
+        </Grid.Cell>
+      </Grid>
+    </BlockStack>
+  );
+}
+
+function SpacingSection({ spacingSettings, handlers }) {
+  return (
+    <BlockStack gap="200">
+      <Text variant="headingMd">Spacing</Text>
+      <Grid>
+        <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 6, xl: 6 }}>
+          <RangeSlider
+            label="Top"
+            value={spacingSettings.spacingTop}
+            onChange={handlers.handleSpacingTopChange}
+            min={SLIDER_CONFIGS.spacing.min}
+            max={SLIDER_CONFIGS.spacing.max}
+            output
+          />
+        </Grid.Cell>
+        <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 6, xl: 6 }}>
+          <RangeSlider
+            label="Bottom"
+            value={spacingSettings.spacingBottom}
+            onChange={handlers.handleSpacingBottomChange}
+            min={SLIDER_CONFIGS.spacing.min}
+            max={SLIDER_CONFIGS.spacing.max}
+            output
+          />
+        </Grid.Cell>
+      </Grid>
+    </BlockStack>
+  );
+}
+
+function CheckmarkSection({ checkmarkSettings, handlers }) {
+  return (
+    <BlockStack gap="200">
+      <Text variant="headingMd">Checkmark</Text>
+      <BlockStack gap="200">
+        <RadioButton
+          label="Show radio"
+          checked={checkmarkSettings.checkmarkVisibility === "showRadio"}
+          id="showRadio"
+          name="checkmarkVisibility"
+          onChange={handlers.handleCheckmarkVisibilityChange}
+          value="show"
+        />
+        <RadioButton
+          label="Hide radio"
+          checked={checkmarkSettings.checkmarkVisibility === "hideRadio"}
+          id="hideRadio"
+          name="checkmarkVisibility"
+          onChange={handlers.handleCheckmarkVisibilityChange}
+          value="hide"
+        />
+      </BlockStack>
+    </BlockStack>
+  );
+}
+
+function BlockSettings({
+  bundleName,
+  setBundleName,
+  visibilitySettings,
+  setVisibilitySettings,
+  headerSettings,
+  setHeaderSettings,
+  shapeSettings,
+  setShapeSettings,
+  spacingSettings,
+  setSpacingSettings,
+  checkmarkSettings,
+  setCheckmarkSettings,
+}) {
+  // Initialize all handlers using custom hooks
+  const visibilityHandlers = useVisibilityHandlers(setVisibilitySettings);
+  const headerHandlers = useHeaderHandlers(setHeaderSettings);
+  const shapeHandlers = useShapeHandlers(setShapeSettings);
+  const spacingHandlers = useSpacingHandlers(setSpacingSettings);
+  const checkmarkHandlers = useCheckmarkHandlers(setCheckmarkSettings);
+
+  return (
+    <BlockStack gap="400">
+      <BundleNameSection
+        bundleName={bundleName}
+        setBundleName={setBundleName}
+      />
+
+      <VisibilitySection
+        visibilitySettings={visibilitySettings}
+        handlers={visibilityHandlers}
+      />
+
+      <HeaderSection
+        headerSettings={headerSettings}
+        handlers={headerHandlers}
+      />
+
+      <Card>
+        <BlockStack gap="400">
+          <ShapeSection
+            shapeSettings={shapeSettings}
+            handlers={shapeHandlers}
+          />
+
+          <SpacingSection
+            spacingSettings={spacingSettings}
+            handlers={spacingHandlers}
+          />
+
+          <CheckmarkSection
+            checkmarkSettings={checkmarkSettings}
+            handlers={checkmarkHandlers}
+          />
+        </BlockStack>
+      </Card>
+    </BlockStack>
+  );
+}
+
+export default BlockSettings;

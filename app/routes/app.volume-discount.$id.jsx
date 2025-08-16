@@ -1,26 +1,259 @@
-import { Banner, BlockStack, Button, ButtonGroup, Grid, InlineStack, Page } from "@shopify/polaris";
+// app.volume-discount.$id
+import {
+  Banner,
+  BlockStack,
+  Button,
+  ButtonGroup,
+  Grid,
+  InlineStack,
+  Page,
+} from "@shopify/polaris";
 import VolumeSettings from "../Components/VolumeDiscount/VolumeSettings";
 import VolumePreview from "../Components/VolumeDiscount/VolumePreview";
-import { useState, useEffect } from "react";
-import { json, useFetcher, useLoaderData, useParams } from '@remix-run/react';
+import { useState, useEffect, useCallback } from "react";
+import { json, useFetcher, useLoaderData, useParams } from "@remix-run/react";
 import prisma from "../db.server";
 import { fetchShop } from "../utils/getShop";
 
-// ========== Remix Loader Function -----------
+// Default values constants
+const DEFAULT_VALUES = {
+  bundleName: "Bundle 1",
+  visibilitySettings: { visibility: "all_products" },
+  headerSettings: {
+    headerText: "Choose your offer",
+    alignment: "center",
+    headerLine: true,
+    lineThickness: 2,
+  },
+  shapeSettings: {
+    blockRadius: 12,
+    blockThickness: 2,
+  },
+  spacingSettings: {
+    spacingTop: 10,
+    spacingBottom: 10,
+  },
+  checkmarkSettings: { checkmarkVisibility: "showRadio" },
+  offers: [
+    {
+      id: "offer-1",
+      title: "Single",
+      subtitle: "Standard price",
+      quantity: "1",
+      image: null,
+      priceType: "default",
+      priceValue: "discount_percentage",
+      priceAmount: "10",
+      highlight: false,
+      selectedByDefault: true,
+      tag: "",
+      highlightSettings: {
+        type: "text",
+        text: "MOST POPULAR",
+        blinking: false,
+        style: "pill",
+        shape: "rounded",
+      },
+    },
+  ],
+  selectedOfferIndex: 0,
+  backgroundColors: {
+    bundle: { red: 230, green: 230, blue: 230, alpha: 0.5 },
+    border: { red: 128, green: 128, blue: 128, alpha: 1 },
+    checkmark: { red: 0, green: 0, blue: 0, alpha: 1 },
+    highlight: { red: 0, green: 0, blue: 0, alpha: 1 },
+    selectedBundle: { red: 255, green: 255, blue: 255, alpha: 1 },
+    borderSelectedBundle: { red: 0, green: 0, blue: 0, alpha: 1 },
+    tags: { red: 128, green: 128, blue: 128, alpha: 0.5 },
+  },
+  pricingColors: {
+    price: { red: 0, green: 0, blue: 0, alpha: 1 },
+    comparedPrice: { red: 255, green: 0, blue: 0, alpha: 1 },
+  },
+  textColors: {
+    header: { red: 0, green: 0, blue: 0, alpha: 1 },
+    title: { red: 0, green: 0, blue: 0, alpha: 1 },
+    subtitle: { red: 128, green: 128, blue: 128, alpha: 1 },
+    highlight: { red: 255, green: 255, blue: 255, alpha: 1 },
+    tags: { red: 128, green: 128, blue: 128, alpha: 1 },
+  },
+  typographySettings: {
+    header: { size: "16", fontStyle: "Bold" },
+    titlePrice: { size: "16", fontStyle: "Bold" },
+    subtitleComparedPrice: { size: "14", fontStyle: "Regular" },
+    tagHighlight: { size: "12", fontStyle: "Regular" },
+  },
+  advancedSettings: {
+    pricing: {
+      showPricesPerItem: false,
+      showCompareAtPrice: true,
+    },
+  },
+};
+
+// Validation messages
+const VALIDATION_MESSAGES = {
+  EMPTY_BUNDLE_NAME:
+    "Bundle name cannot be empty. Please provide a name for your bundle.",
+  NO_VALID_OFFERS:
+    "Please add at least one valid offer with a title and a positive quantity.",
+  DUPLICATE_QUANTITIES:
+    "Each offer must have a unique quantity. Please ensure all quantities are distinct.",
+  NO_DUPLICATE_BUNDLE_NAME:
+    "Bundle name already exists. No duplicate bundleName allowed.",
+  EMPTY_PRICE_AMOUNT:
+    "Offer priceAmount cannot be empty. Please provide a valid price amount.",
+};
+
+// Custom hook for state initialization
+function useInitializeState(isEdit, data) {
+  const initializeState = useCallback(
+    (defaultValue, loadedPath) => {
+      if (isEdit && data?.settings && loadedPath) {
+        const keys = loadedPath.split(".");
+        let value = data.settings;
+        for (const key of keys) {
+          value = value?.[key];
+        }
+        return value !== undefined ? value : defaultValue;
+      }
+      return defaultValue;
+    },
+    [isEdit, data],
+  );
+
+  return initializeState;
+}
+
+// Custom hook for banner management
+function useBanner() {
+  const [showBanner, setShowBanner] = useState(false);
+  const [bannerMessage, setBannerMessage] = useState("");
+  const [bannerTone, setBannerTone] = useState("info");
+
+  const showError = useCallback((message) => {
+    setShowBanner(true);
+    setBannerMessage(message);
+    setBannerTone("critical");
+  }, []);
+
+  const showSuccess = useCallback((message) => {
+    setShowBanner(true);
+    setBannerMessage(message);
+    setBannerTone("success");
+  }, []);
+
+  const hideBanner = useCallback(() => {
+    setShowBanner(false);
+    setBannerMessage("");
+  }, []);
+
+  return {
+    showBanner,
+    bannerMessage,
+    bannerTone,
+    showError,
+    showSuccess,
+    hideBanner,
+  };
+}
+
+// Custom hook for validation
+function useValidation() {
+  const validateBundleName = useCallback((bundleName) => {
+    return bundleName && bundleName.trim() !== "";
+  }, []);
+
+  const validateOffers = useCallback(
+    (offers, currentBundleName, existingBundleNames) => {
+      // Check for empty priceAmount in any offer
+      for (const offer of offers) {
+        if (
+          offer.priceAmount === "" ||
+          offer.priceAmount === "0" ||
+          !offer.priceAmount
+        ) {
+          return {
+            isValid: false,
+            message: VALIDATION_MESSAGES.EMPTY_PRICE_AMOUNT,
+          };
+        }
+      }
+
+      // Check for duplicate bundleName (exclude current bundle if editing)
+      if (
+        existingBundleNames &&
+        existingBundleNames.includes(currentBundleName.trim())
+      ) {
+        return {
+          isValid: false,
+          message: VALIDATION_MESSAGES.NO_DUPLICATE_BUNDLE_NAME,
+        };
+      }
+
+      const validOffers = offers.filter((offer) => {
+        const isValidTitle = offer.title && offer.title.trim() !== "";
+        const isValidQuantity =
+          offer.quantity &&
+          !isNaN(parseInt(offer.quantity)) &&
+          parseInt(offer.quantity) > 0;
+        return isValidTitle && isValidQuantity;
+      });
+
+      if (validOffers.length === 0) {
+        return { isValid: false, message: VALIDATION_MESSAGES.NO_VALID_OFFERS };
+      }
+
+      // Check for unique quantities
+      const quantities = validOffers.map((offer) => parseInt(offer.quantity));
+      const uniqueQuantities = new Set(quantities);
+      if (uniqueQuantities.size !== quantities.length) {
+        return {
+          isValid: false,
+          message: VALIDATION_MESSAGES.DUPLICATE_QUANTITIES,
+        };
+      }
+
+      return { isValid: true };
+    },
+    [],
+  );
+
+  return { validateBundleName, validateOffers };
+}
+
+// Remix Loader Function
 export async function loader({ request, params }) {
   const { id } = params;
   const shop = await fetchShop(request);
 
-  // If id is "new", return empty data for creation
   if (id === "new") {
-    return json({ 
-      success: true, 
-      isEdit: false, 
-      data: null 
-    });
+    // Fetch existing bundle names for duplicate validation
+    try {
+      const existingBundles = await prisma.volumeDiscount.findMany({
+        where: { shop: shop.id },
+        select: { bundleName: true },
+      });
+
+      return json({
+        success: true,
+        isEdit: false,
+        data: null,
+        existingBundleNames: existingBundles
+          .filter((bundle) => bundle.bundleName) // Filter out null bundleNames
+          .map((bundle) => bundle.bundleName.trim()),
+      });
+    } catch (error) {
+      console.error("Error fetching existing bundles:", error);
+      return json({
+        success: true,
+        isEdit: false,
+        data: null,
+        existingBundleNames: [],
+      });
+    }
   }
 
-  // If id exists, fetch the volume discount data for editing
   try {
     const volumeDiscount = await prisma.volumeDiscount.findFirst({
       where: {
@@ -33,10 +266,22 @@ export async function loader({ request, params }) {
       throw new Response("Volume Discount not found", { status: 404 });
     }
 
-    return json({ 
-      success: true, 
-      isEdit: true, 
-      data: volumeDiscount 
+    // Fetch existing bundle names excluding current one
+    const existingBundles = await prisma.volumeDiscount.findMany({
+      where: {
+        shop: shop.id,
+        id: { not: parseInt(id) }, // Exclude current bundle
+      },
+      select: { bundleName: true },
+    });
+
+    return json({
+      success: true,
+      isEdit: true,
+      data: volumeDiscount,
+      existingBundleNames: existingBundles
+        .filter((bundle) => bundle.bundleName) // Filter out null bundleNames
+        .map((bundle) => bundle.bundleName.trim()),
     });
   } catch (error) {
     console.error("Error loading volume discount:", error);
@@ -45,264 +290,199 @@ export async function loader({ request, params }) {
 }
 
 function MainVolumeDiscount() {
-  const { success, isEdit, data } = useLoaderData();
-  const params = useParams();
-  const { id } = params;
+  const { success, isEdit, data, existingBundleNames = [] } = useLoaderData();
+  const { id } = useParams();
+  const fetcher = useFetcher();
 
-  // State for banner messages
-  const [showBanner, setShowBanner] = useState(false);
-  const [bannerMessage, setBannerMessage] = useState('');
-  const [bannerTone, setBannerTone] = useState('info');
+  const initializeState = useInitializeState(isEdit, data);
+  const {
+    showBanner,
+    bannerMessage,
+    bannerTone,
+    showError,
+    showSuccess,
+    hideBanner,
+  } = useBanner();
+  const { validateBundleName, validateOffers } = useValidation();
 
-  // Initialize states with default values or loaded data
-  const initializeState = (defaultValue, loadedPath) => {
-    if (isEdit && data?.settings && loadedPath) {
-      const keys = loadedPath.split('.');
-      let value = data.settings;
-      for (const key of keys) {
-        value = value?.[key];
-      }
-      return value !== undefined ? value : defaultValue;
+  // State declarations - Initialize bundleName from data.bundleName if editing
+  const [bundleName, setBundleName] = useState(() => {
+    if (isEdit && data?.bundleName) {
+      return data.bundleName;
     }
-    return defaultValue;
-  };
-
-  // Block Tab States
-  const [bundleName, setBundleName] = useState(
-    initializeState('Bundle 1', 'bundleSettings.bundleName')
-  );
+    return initializeState(
+      DEFAULT_VALUES.bundleName,
+      "bundleSettings.bundleName",
+    );
+  });
 
   const [visibilitySettings, setVisibilitySettings] = useState(
-    initializeState({ visibility: 'all_products' }, 'bundleSettings.visibilitySettings')
+    initializeState(
+      DEFAULT_VALUES.visibilitySettings,
+      "bundleSettings.visibilitySettings",
+    ),
   );
-
   const [headerSettings, setHeaderSettings] = useState(
-    initializeState({
-      headerText: 'Choose your offer',
-      alignment: 'center',
-      headerLine: true,
-      lineThickness: 2,
-    }, 'bundleSettings.headerSettings')
+    initializeState(
+      DEFAULT_VALUES.headerSettings,
+      "bundleSettings.headerSettings",
+    ),
   );
-
   const [shapeSettings, setShapeSettings] = useState(
-    initializeState({
-      blockRadius: 12,
-      blockThickness: 2,
-    }, 'bundleSettings.shapeSettings')
+    initializeState(
+      DEFAULT_VALUES.shapeSettings,
+      "bundleSettings.shapeSettings",
+    ),
   );
-
   const [spacingSettings, setSpacingSettings] = useState(
-    initializeState({
-      spacingTop: 10,
-      spacingBottom: 10,
-    }, 'bundleSettings.spacingSettings')
+    initializeState(
+      DEFAULT_VALUES.spacingSettings,
+      "bundleSettings.spacingSettings",
+    ),
   );
-
   const [checkmarkSettings, setCheckmarkSettings] = useState(
-    initializeState({ checkmarkVisibility: 'show' }, 'bundleSettings.checkmarkSettings')
+    initializeState(
+      DEFAULT_VALUES.checkmarkSettings,
+      "bundleSettings.checkmarkSettings",
+    ),
   );
-
-  // Offer Tab States
   const [offers, setOffers] = useState(
-    initializeState([
-      {
-        id: 'offer-1',
-        title: 'Single',
-        subtitle: 'Standard price',
-        quantity: '1',
-        image: null,
-        priceType: 'default',
-        priceValue: 'default',
-        priceAmount: '',
-        buyQuantity: '1',
-        getQuantity: '1',
-        highlight: false,
-        selectedByDefault: true,
-        tag: '',
-        highlightSettings: {
-          type: 'text',
-          text: 'MOST POPULAR',
-          blinking: false,
-          style: 'pill',
-          shape: 'rounded',
-        }
-      }
-    ], 'offerSettings.offers')
+    initializeState(DEFAULT_VALUES.offers, "offerSettings.offers"),
   );
-
   const [selectedOfferIndex, setSelectedOfferIndex] = useState(
-    initializeState(0, 'offerSettings.selectedOfferIndex')
+    initializeState(
+      DEFAULT_VALUES.selectedOfferIndex,
+      "offerSettings.selectedOfferIndex",
+    ),
   );
-
-  // Design Tab States
   const [backgroundColors, setBackgroundColors] = useState(
-    initializeState({
-      bundle: { red: 230, green: 230, blue: 230, alpha: 0.5 },
-      border: { red: 128, green: 128, blue: 128, alpha: 1 },
-      checkmark: { red: 0, green: 0, blue: 0, alpha: 1 },
-      highlight: { red: 0, green: 0, blue: 0, alpha: 1 },
-      selectedBundle: { red: 255, green: 255, blue: 255, alpha: 1 },
-      borderSelectedBundle: { red: 0, green: 0, blue: 0, alpha: 1 },
-      tags: { red: 128, green: 128, blue: 128, alpha: 0.5 },
-    }, 'designSettings.backgroundColors')
+    initializeState(
+      DEFAULT_VALUES.backgroundColors,
+      "designSettings.backgroundColors",
+    ),
   );
-
   const [pricingColors, setPricingColors] = useState(
-    initializeState({
-      price: { red: 0, green: 0, blue: 0, alpha: 1 },
-      comparedPrice: { red: 255, green: 0, blue: 0, alpha: 1 },
-    }, 'designSettings.pricingColors')
+    initializeState(
+      DEFAULT_VALUES.pricingColors,
+      "designSettings.pricingColors",
+    ),
   );
-
   const [textColors, setTextColors] = useState(
-    initializeState({
-      header: { red: 0, green: 0, blue: 0, alpha: 1 },
-      title: { red: 0, green: 0, blue: 0, alpha: 1 },
-      subtitle: { red: 128, green: 128, blue: 128, alpha: 1 },
-      highlight: { red: 255, green: 255, blue: 255, alpha: 1 },
-      tags: { red: 128, green: 128, blue: 128, alpha: 1 },
-    }, 'designSettings.textColors')
+    initializeState(DEFAULT_VALUES.textColors, "designSettings.textColors"),
   );
-
   const [typographySettings, setTypographySettings] = useState(
-    initializeState({
-      header: { size: '16', fontStyle: 'Bold' },
-      titlePrice: { size: '16', fontStyle: 'Bold' },
-      subtitleComparedPrice: { size: '14', fontStyle: 'Regular' },
-      tagHighlight: { size: '12', fontStyle: 'Regular' },
-    }, 'designSettings.typographySettings')
+    initializeState(
+      DEFAULT_VALUES.typographySettings,
+      "designSettings.typographySettings",
+    ),
   );
-
   const [openColorPickerFor, setOpenColorPickerFor] = useState(null);
-
-  // Advanced Tab States
   const [settings, setSettings] = useState(
-    initializeState({
-      variants: {
-        allowCustomerChoice: true,
-        hideThemeVariant: true,
-        hideOutOfStock: false,
-        hideThemePrice: true,
-      },
-      pricing: {
-        showPricesPerItem: false,
-        showCompareAtPrice: true,
-      }
-    }, 'advancedSettings')
+    initializeState(DEFAULT_VALUES.advancedSettings, "advancedSettings"),
   );
 
-  // All Volume Settings
+  // Computed values
   const allVolumeSettings = {
     bundleSettings: {
-      bundleName: bundleName,
-      visibilitySettings: visibilitySettings,
-      headerSettings: headerSettings,
-      shapeSettings: shapeSettings,
-      checkmarkSettings: checkmarkSettings,
+      bundleName,
+      visibilitySettings,
+      headerSettings,
+      shapeSettings,
+      spacingSettings,
+      checkmarkSettings,
     },
     offerSettings: {
-      offers: offers,
-      selectedOfferIndex: selectedOfferIndex,
+      offers,
+      selectedOfferIndex,
     },
     designSettings: {
-      backgroundColors: backgroundColors,
-      pricingColors: pricingColors,
-      textColors: textColors,
-      typographySettings: typographySettings,
-      openColorPickerFor: openColorPickerFor,
+      backgroundColors,
+      pricingColors,
+      textColors,
+      typographySettings,
+      openColorPickerFor,
     },
     advancedSettings: settings,
   };
 
-  // console.log('allVolumeSettings:', allVolumeSettings);
-
-  // Save Settings to Database using separate API route
-  const fetcher = useFetcher();
-
-  const handleSave = (status) => {
-    // Basic validation: Check if bundleName is not empty
-    if (!bundleName || bundleName.trim() === '') {
-      setShowBanner(true);
-      setBannerMessage("Bundle name cannot be empty. Please provide a name for your bundle.");
-      setBannerTone("critical");
-      return;
-    }
-
-    // Validate offers
-    const validOffers = offers.filter((offer) => {
-      const isValidTitle = offer.title && offer.title.trim() !== '';
-      const isValidQuantity = offer.quantity && !isNaN(parseInt(offer.quantity)) && parseInt(offer.quantity) > 0;
-      return isValidTitle && isValidQuantity;
-    });
-
-    if (validOffers.length === 0) {
-      setShowBanner(true);
-      setBannerMessage("Please add at least one valid offer with a title and a positive quantity.");
-      setBannerTone("critical");
-      return;
-    }
-
-    // Check for unique offer quantities
-    const quantities = validOffers.map((offer) => parseInt(offer.quantity));
-    const uniqueQuantities = new Set(quantities);
-    if (uniqueQuantities.size !== quantities.length) {
-      setShowBanner(true);
-      setBannerMessage("Each offer must have a unique quantity. Please ensure all quantities are distinct.");
-      setBannerTone("critical");
-      return;
-    }
-
-    // If all validations pass, proceed with submission to API route
-    fetcher.submit(
-      {
-        volumeSettings: JSON.stringify(allVolumeSettings),
-        status: status,
-        volumeId: id, // Pass the ID to determine create vs update
-        isEdit: isEdit.toString(), // Pass edit flag
-      },
-      { method: "post", action: "/api/volume-discount" }
-    );
-  };
-
-  // Effect to handle fetcher responses and update banner
-  useEffect(() => {
-    if (fetcher.data) {
-      setShowBanner(true);
-      setBannerMessage(fetcher.data.message);
-      setBannerTone(fetcher.data.success ? 'success' : 'critical');
-
-      // Optionally, hide the banner after a few seconds for success messages
-      if (fetcher.data.success) {
-        const timer = setTimeout(() => {
-          setShowBanner(false);
-          setBannerMessage('');
-        }, 5000);
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [fetcher.data]);
+  // console.log("allVolumeSettings", allVolumeSettings);
 
   const pageTitle = isEdit ? `Edit ${bundleName}` : "Create Volume Discount";
 
+  // Event handlers
+  const handleSave = useCallback(
+    (status) => {
+      if (!validateBundleName(bundleName)) {
+        showError(VALIDATION_MESSAGES.EMPTY_BUNDLE_NAME);
+        return;
+      }
+
+      // Pass existing bundle names for validation
+      const offerValidation = validateOffers(
+        offers,
+        bundleName,
+        existingBundleNames,
+      );
+      if (!offerValidation.isValid) {
+        showError(offerValidation.message);
+        return;
+      }
+
+      fetcher.submit(
+        {
+          volumeSettings: JSON.stringify(allVolumeSettings),
+          bundleName: bundleName, // Send bundleName separately for easier database storage
+          status,
+          volumeId: id,
+          isEdit: isEdit.toString(),
+        },
+        { method: "post", action: "/api/volume-discount" },
+      );
+    },
+    [
+      bundleName,
+      offers,
+      existingBundleNames,
+      allVolumeSettings,
+      id,
+      isEdit,
+      validateBundleName,
+      validateOffers,
+      showError,
+      fetcher,
+    ],
+  );
+
+  // Effects
+  useEffect(() => {
+    if (fetcher.data) {
+      if (fetcher.data.success) {
+        showSuccess(fetcher.data.message);
+        setTimeout(hideBanner, 5000);
+      } else {
+        showError(fetcher.data.message);
+      }
+    }
+  }, [fetcher.data, showSuccess, showError, hideBanner]);
+
+  const isLoading = fetcher.state === "submitting";
+
   return (
-    <Page 
+    <Page
       title={pageTitle}
       backAction={{ content: "Volume Discounts", url: "/app" }}
     >
       {showBanner && (
         <Banner
           title={bannerMessage}
-          onDismiss={() => setShowBanner(false)}
+          onDismiss={hideBanner}
           tone={bannerTone}
         />
       )}
-      <br />
 
       <Grid>
         <Grid.Cell columnSpan={{ xs: 6, md: 6, lg: 6, xl: 6 }}>
           <VolumeSettings
-            // Block Tab Props
             bundleName={bundleName}
             setBundleName={setBundleName}
             visibilitySettings={visibilitySettings}
@@ -315,14 +495,10 @@ function MainVolumeDiscount() {
             setSpacingSettings={setSpacingSettings}
             checkmarkSettings={checkmarkSettings}
             setCheckmarkSettings={setCheckmarkSettings}
-
-            // Offer Tab Props
             offers={offers}
             setOffers={setOffers}
             selectedOfferIndex={selectedOfferIndex}
             setSelectedOfferIndex={setSelectedOfferIndex}
-
-            // Design Tab Props
             backgroundColors={backgroundColors}
             setBackgroundColors={setBackgroundColors}
             pricingColors={pricingColors}
@@ -333,8 +509,6 @@ function MainVolumeDiscount() {
             setTypographySettings={setTypographySettings}
             openColorPickerFor={openColorPickerFor}
             setOpenColorPickerFor={setOpenColorPickerFor}
-
-            // Advanced Tab Props
             advancedSettings={settings}
             setAdvancedSettings={setSettings}
           />
@@ -343,18 +517,16 @@ function MainVolumeDiscount() {
         <Grid.Cell columnSpan={{ xs: 6, md: 6, lg: 6, xl: 6 }}>
           <BlockStack gap={200}>
             <VolumePreview allVolumeSettings={allVolumeSettings} />
+
             <InlineStack align="end">
               <ButtonGroup>
-                <Button
-                  onClick={() => handleSave("draft")}
-                  loading={fetcher.state === "submitting"}
-                >
+                <Button onClick={() => handleSave("draft")} loading={isLoading}>
                   Save as draft
                 </Button>
                 <Button
                   variant="primary"
                   onClick={() => handleSave("published")}
-                  loading={fetcher.state === "submitting"}
+                  loading={isLoading}
                 >
                   {isEdit ? "Update" : "Save"}
                 </Button>
@@ -363,8 +535,10 @@ function MainVolumeDiscount() {
           </BlockStack>
         </Grid.Cell>
       </Grid>
-      <br />
-      <br />
+      <div className="bottom__spacing">
+        <br />
+        <br />
+      </div>
     </Page>
   );
 }

@@ -1,7 +1,10 @@
-import { Card, Button } from "@shopify/polaris";
-import React from "react";
+// Components/VolumeDiscount/VolumePreview.jsx
+
+import { Card } from "@shopify/polaris";
 
 function VolumePreview({ allVolumeSettings }) {
+  console.log("volume settings", allVolumeSettings);
+
   // Helper function to convert RGB object to CSS color
   const rgbToColor = (color) => {
     if (!color) return "transparent";
@@ -10,14 +13,56 @@ function VolumePreview({ allVolumeSettings }) {
 
   // Helper function to format price
   const formatPrice = (price) => {
-    return `₹${price}`;
+    if (typeof price === "string" && price.includes("Rs")) {
+      return price;
+    }
+    return `₹${parseFloat(price).toFixed(2)}`;
+  };
+
+  // Helper function to calculate discounted price
+  const calculatePrice = (offer, basePrice = 100) => {
+    if (!offer.priceAmount || offer.priceAmount === "") {
+      return basePrice;
+    }
+
+    const discountValue = parseFloat(offer.priceAmount);
+
+    if (offer.priceValue === "discount_percentage") {
+      return basePrice - (basePrice * discountValue) / 100;
+    } else if (offer.priceValue === "fixed_amount") {
+      return Math.max(0, basePrice - discountValue);
+    }
+
+    return basePrice;
+  };
+
+  // Helper function to generate sample price based on quantity and discount
+  const generateSamplePrice = (offer, index) => {
+    const basePricePerItem = 749.95;
+    const quantity = parseInt(offer.quantity) || 1;
+    const totalBasePrice = basePricePerItem * quantity;
+
+    if (offer.priceAmount && offer.priceAmount !== "") {
+      const discountedPrice = calculatePrice(offer, totalBasePrice);
+      return {
+        price: discountedPrice,
+        compareAtPrice:
+          totalBasePrice > discountedPrice ? totalBasePrice : null,
+      };
+    }
+
+    return { price: totalBasePrice, compareAtPrice: null };
   };
 
   // Extract settings from props
   const settings = allVolumeSettings || {};
   const bundleSettings = settings.bundleSettings || {};
-  const offerSettings = settings.offerSettings || { offers: [], selectedOfferIndex: 0 };
+  const offerSettings = settings.offerSettings || {
+    offers: [],
+    selectedOfferIndex: 0,
+  };
   const designSettings = settings.designSettings || {};
+  const advancedSettings = settings.advancedSettings || {};
 
   // Get colors from design settings
   const colors = {
@@ -27,18 +72,31 @@ function VolumePreview({ allVolumeSettings }) {
     price: rgbToColor(designSettings?.pricingColors?.price),
     comparedPrice: rgbToColor(designSettings?.pricingColors?.comparedPrice),
     bundle: rgbToColor(designSettings?.backgroundColors?.bundle),
-    selectedBundle: rgbToColor(designSettings?.backgroundColors?.selectedBundle),
+    selectedBundle: rgbToColor(
+      designSettings?.backgroundColors?.selectedBundle,
+    ),
     border: rgbToColor(designSettings?.backgroundColors?.border),
-    borderSelected: rgbToColor(designSettings?.backgroundColors?.borderSelectedBundle),
+    borderSelected: rgbToColor(
+      designSettings?.backgroundColors?.borderSelectedBundle,
+    ),
     highlight: rgbToColor(designSettings?.backgroundColors?.highlight),
     highlightText: rgbToColor(designSettings?.textColors?.highlight),
+    checkmark: rgbToColor(designSettings?.backgroundColors?.checkmark),
   };
 
   // Get typography settings
   const typography = designSettings?.typographySettings || {};
 
   // Get shape settings
-  const shapeSettings = bundleSettings?.shapeSettings || { blockRadius: 12, blockThickness: 2 };
+  const shapeSettings = bundleSettings?.shapeSettings || {
+    blockRadius: 12,
+    blockThickness: 2,
+  };
+
+  // Get checkmark settings
+  const checkmarkSettings = bundleSettings?.checkmarkSettings || {
+    checkmarkVisibility: "show",
+  };
 
   // Sample data for preview (if no offers are provided)
   const sampleOffers = [
@@ -48,9 +106,10 @@ function VolumePreview({ allVolumeSettings }) {
       subtitle: "Standard price",
       quantity: "1",
       priceType: "default",
+      priceValue: "discount_percentage",
+      priceAmount: "0",
       highlight: false,
       selectedByDefault: true,
-      price: 749.95,
       highlightSettings: {
         type: "text",
         text: "MOST POPULAR",
@@ -61,194 +120,272 @@ function VolumePreview({ allVolumeSettings }) {
     },
     {
       id: "offer-2",
-      title: "Duo",
-      subtitle: "You save 10%",
+      title: "Double Offer",
+      subtitle: "10% OFF",
       quantity: "2",
-      priceType: "discount",
+      priceType: "default",
+      priceValue: "discount_percentage",
+      priceAmount: "10",
       highlight: false,
+      selectedByDefault: false,
       highlightSettings: {
         type: "text",
-        text: "MOST POPULAR",
+        text: "SAVE MORE",
         blinking: false,
         style: "pill",
         shape: "rounded",
       },
-      selectedByDefault: false,
-      price: 1349.91,
-      compareAtPrice: 1499.90,
     },
     {
       id: "offer-3",
-      title: "Trio",
-      subtitle: "You save 20%",
+      title: "Triple Offer",
+      subtitle: "20% OFF",
       quantity: "3",
-      priceType: "discount",
+      priceType: "default",
+      priceValue: "discount_percentage",
+      priceAmount: "20",
       highlight: true,
+      selectedByDefault: false,
       highlightSettings: {
         type: "text",
-        text: "MOST POPULAR",
+        text: "BEST VALUE",
         blinking: false,
         style: "pill",
         shape: "rounded",
       },
-      selectedByDefault: false,
-      price: 1799.88,
-      compareAtPrice: 2249.85,
     },
   ];
 
   // Use offers from settings or sample offers
-  const offers = offerSettings.offers?.length > 0 ? offerSettings.offers : sampleOffers;
+  const offers =
+    offerSettings.offers?.length > 0 ? offerSettings.offers : sampleOffers;
   const selectedOfferIndex = offerSettings.selectedOfferIndex || 0;
+
+  // Check if radio buttons should be shown
+  const showRadioButtons =
+    checkmarkSettings.checkmarkVisibility === "show" ||
+    checkmarkSettings.checkmarkVisibility === "showRadio";
 
   return (
     <Card>
       <div className="preview-container" style={{ padding: "16px" }}>
-        {/* <div className="preview-header" style={{
-          textAlign: bundleSettings?.headerSettings?.alignment || "center",
-          marginBottom: "16px",
-          color: colors.header,
-          fontSize: `${typography?.header?.size || 16}px`,
-          fontWeight: typography?.header?.fontStyle === "Bold" ? "bold" : "normal",
-          borderBottom: bundleSettings?.headerSettings?.headerLine ? `${bundleSettings?.headerSettings?.lineThickness || 1}px solid ${colors.header}` : "none",
-          paddingBottom: bundleSettings?.headerSettings?.headerLine ? "8px" : "0",
-        }}>
-          {bundleSettings?.headerSettings?.headerText || "Choose your offer"}
-        </div> */}
-
-        <div className="" style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '10px',
-          marginBottom: '16px'
-        }}>
-          <span style={{
-            flex: 1,
-            height: bundleSettings?.headerSettings?.headerLine ? `${bundleSettings?.headerSettings?.lineThickness || 1}px` : '0px',
-            background: colors?.border,
-          }}></span>
-          <div className="preview-header" style={{
-            textAlign: bundleSettings?.headerSettings?.alignment || "center",
-            // marginBottom: "16px",
-            color: colors.header,
-            fontSize: `${typography?.header?.size || 16}px`,
-            fontWeight: typography?.header?.fontStyle === "Bold" ? "bold" : "normal",
-            // borderBottom: bundleSettings?.headerSettings?.headerLine ? `${bund leSettings?.headerSettings?.lineThickness || 1}px solid ${colors.header}` : "none",
-            // paddingBottom: bundleSettings?.headerSettings?.headerLine ? "8px" : "0",
-          }}>
+        {/* Header with lines */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "10px",
+            marginBottom: "16px",
+          }}
+        >
+          <span
+            style={{
+              flex: 1,
+              height: bundleSettings?.headerSettings?.headerLine
+                ? `${bundleSettings?.headerSettings?.lineThickness || 1}px`
+                : "0px",
+              background: colors.border,
+            }}
+          />
+          <div
+            className="preview-header"
+            style={{
+              textAlign: bundleSettings?.headerSettings?.alignment || "center",
+              color: colors.header,
+              fontSize: `${typography?.header?.size || 16}px`,
+              fontWeight:
+                typography?.header?.fontStyle === "Bold" ? "bold" : "normal",
+              whiteSpace: "nowrap",
+              padding: "0 16px",
+            }}
+          >
             {bundleSettings?.headerSettings?.headerText || "Choose your offer"}
           </div>
-          <span style={{
-            flex: 1,
-            height: bundleSettings?.headerSettings?.headerLine ? `${bundleSettings?.headerSettings?.lineThickness || 1}px` : '0px',
-            background: colors?.border,
-          }}></span>
+          <span
+            style={{
+              flex: 1,
+              height: bundleSettings?.headerSettings?.headerLine
+                ? `${bundleSettings?.headerSettings?.lineThickness || 1}px`
+                : "0px",
+              background: colors.border,
+            }}
+          />
         </div>
 
+        {/* Offers container */}
         <div className="offers-container">
-          {offers.map((offer, index) => (
-            <div
-              key={offer.id || index}
-              className="offer-item"
-              style={{
-                backgroundColor: index === selectedOfferIndex ? colors.selectedBundle : colors.bundle,
-                borderRadius: `${shapeSettings.blockRadius}px`,
-                border: `${shapeSettings.blockThickness}px solid ${index === selectedOfferIndex ? colors.borderSelected : colors.border}`,
-                padding: "16px",
-                marginBottom: "12px",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                position: "relative",
-              }}
-            >
-              {/* Radio button and title section */}
-              <div style={{ display: "flex", alignItems: "center" }}>
-                <div style={{
-                  width: "20px",
-                  height: "20px",
-                  borderRadius: "50%",
-                  border: `2px solid ${colors.border}`,
-                  marginRight: "12px",
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                }}>
-                  {index === selectedOfferIndex && (
-                    <div style={{
-                      width: "12px",
-                      height: "12px",
-                      borderRadius: "50%",
-                      backgroundColor: "#5C3D99",
-                    }} />
-                  )}
-                </div>
-                <div>
-                  <div style={{
-                    color: colors.title,
-                    fontSize: `${typography?.titlePrice?.size || 16}px`,
-                    fontWeight: typography?.titlePrice?.fontStyle === "Bold" ? "bold" : "normal",
-                  }}>
-                    {offer.title}
-                  </div>
-                  <div style={{
-                    color: colors.subtitle,
-                    fontSize: `${typography?.subtitleComparedPrice?.size || 14}px`,
-                    fontWeight: typography?.subtitleComparedPrice?.fontStyle === "Bold" ? "bold" : "normal",
-                  }}>
-                    {offer.subtitle}
-                  </div>
-                </div>
-              </div>
+          {offers.map((offer, index) => {
+            const isSelected = index === selectedOfferIndex;
+            const pricing = generateSamplePrice(offer, index);
 
-              {/* Price section */}
-              <div style={{ textAlign: "right" }}>
-                <div style={{
-                  color: colors.price,
-                  fontSize: `${typography?.titlePrice?.size || 16}px`,
-                  fontWeight: typography?.titlePrice?.fontStyle === "Bold" ? "bold" : "normal",
-                }}>
-                  {formatPrice(offer.price || 0)}
+            return (
+              <div
+                key={offer.id || index}
+                className="offer-item"
+                style={{
+                  backgroundColor: isSelected
+                    ? colors.selectedBundle
+                    : colors.bundle,
+                  borderRadius: `${shapeSettings.blockRadius}px`,
+                  border: `${shapeSettings.blockThickness}px solid ${
+                    isSelected ? colors.borderSelected : colors.border
+                  }`,
+                  padding: "16px",
+                  marginBottom: "12px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  position: "relative",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                }}
+              >
+                {/* Radio button and title section */}
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  {showRadioButtons && (
+                    <div
+                      style={{
+                        width: "20px",
+                        height: "20px",
+                        borderRadius: "50%",
+                        border: `2px solid ${colors.border}`,
+                        marginRight: "12px",
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        backgroundColor: isSelected
+                          ? colors.checkmark
+                          : "transparent",
+                      }}
+                    >
+                      {isSelected && (
+                        <div
+                          style={{
+                            width: "12px",
+                            height: "12px",
+                            borderRadius: "50%",
+                            backgroundColor: colors.highlightText || "#5C3D99",
+                          }}
+                        />
+                      )}
+                    </div>
+                  )}
+
+                  <div>
+                    <div
+                      style={{
+                        color: colors.title,
+                        fontSize: `${typography?.titlePrice?.size || 16}px`,
+                        fontWeight:
+                          typography?.titlePrice?.fontStyle === "Bold"
+                            ? "bold"
+                            : "normal",
+                        marginBottom: "4px",
+                      }}
+                    >
+                      {offer.title}
+                    </div>
+                    <div
+                      style={{
+                        color: colors.subtitle,
+                        fontSize: `${typography?.subtitleComparedPrice?.size || 14}px`,
+                        fontWeight:
+                          typography?.subtitleComparedPrice?.fontStyle ===
+                          "Bold"
+                            ? "bold"
+                            : "normal",
+                      }}
+                    >
+                      {offer.subtitle}
+                    </div>
+                  </div>
                 </div>
-                {offer.compareAtPrice && (
-                  <div style={{
-                    color: colors.comparedPrice,
-                    fontSize: `${typography?.subtitleComparedPrice?.size || 14}px`,
-                    fontWeight: typography?.subtitleComparedPrice?.fontStyle === "Bold" ? "bold" : "normal",
-                    textDecoration: "line-through",
-                  }}>
-                    {formatPrice(offer.compareAtPrice)}
+
+                {/* Price section */}
+                <div style={{ textAlign: "right" }}>
+                  {advancedSettings?.pricing?.showPricesPerItem && (
+                    <div
+                      style={{
+                        color: colors.subtitle,
+                        fontSize: `${parseInt(typography?.subtitleComparedPrice?.size || 14) - 2}px`,
+                        marginBottom: "2px",
+                      }}
+                    >
+                      {formatPrice(pricing.price / parseInt(offer.quantity))}{" "}
+                      each
+                    </div>
+                  )}
+
+                  <div
+                    style={{
+                      color: colors.price,
+                      fontSize: `${typography?.titlePrice?.size || 16}px`,
+                      fontWeight:
+                        typography?.titlePrice?.fontStyle === "Bold"
+                          ? "bold"
+                          : "normal",
+                    }}
+                  >
+                    {formatPrice(pricing.price)}
+                  </div>
+
+                  {pricing.compareAtPrice &&
+                    advancedSettings?.pricing?.showCompareAtPrice && (
+                      <div
+                        style={{
+                          color: colors.comparedPrice,
+                          fontSize: `${typography?.subtitleComparedPrice?.size || 14}px`,
+                          fontWeight:
+                            typography?.subtitleComparedPrice?.fontStyle ===
+                            "Bold"
+                              ? "bold"
+                              : "normal",
+                          textDecoration: "line-through",
+                        }}
+                      >
+                        {formatPrice(pricing.compareAtPrice)}
+                      </div>
+                    )}
+                </div>
+
+                {/* Highlight tag */}
+                {offer.highlight && offer.highlightSettings?.text && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "-10px",
+                      right: "20px",
+                      backgroundColor: colors.highlight,
+                      color: colors.highlightText,
+                      padding: "4px 8px",
+                      borderRadius:
+                        offer.highlightSettings?.style === "rectangle"
+                          ? "4px"
+                          : `${shapeSettings.blockRadius}px`,
+                      fontSize: `${typography?.tagHighlight?.size || 12}px`,
+                      fontWeight:
+                        typography?.tagHighlight?.fontStyle === "Bold"
+                          ? "bold"
+                          : "normal",
+                      animation: offer.highlightSettings?.blinking
+                        ? "blink 1s linear infinite"
+                        : "none",
+                      zIndex: 1,
+                    }}
+                  >
+                    {offer.highlightSettings.text}
                   </div>
                 )}
               </div>
-
-              {/* Highlight tag */}
-              {offer.highlight && (
-                <div style={{
-                  position: "absolute",
-                  top: "-10px",
-                  right: "20px",
-                  backgroundColor: colors.highlight, // Use dynamic highlight background color
-                  color: colors.highlightText, // Use dynamic highlight text color
-                  padding: "4px 8px",
-                  borderRadius: `${shapeSettings.blockRadius}px`, // Use dynamic block radius for highlight tag                 
-                  fontSize: `${typography?.tagHighlight?.size || 12}px`,
-                  fontWeight: typography?.tagHighlight?.fontStyle === "Bold" ? "bold" : "normal",
-                }}>
-                  {offer.highlightSettings?.text}
-                </div>  
-              )} 
-            </div>
-          ))} 
+            );
+          })}
         </div>
 
         {/* Add to cart button */}
         <button
-          fullWidth
-          // disabled
           style={{
-            marginTop: "8px",
+            marginTop: "16px",
             backgroundColor: "#f0f0f0",
             color: "#999",
             border: "none",
@@ -256,190 +393,32 @@ function VolumePreview({ allVolumeSettings }) {
             borderRadius: "6px",
             cursor: "not-allowed",
             textAlign: "center",
-            boxShadow: '2px 2px #ccc',
-            fontSize: '16px',
-            width: '100%',
+            fontSize: "16px",
+            fontWeight: "600",
+            width: "100%",
+            textTransform: "uppercase",
+            letterSpacing: "0.5px",
           }}
         >
           ADD TO CART
         </button>
       </div>
-    </Card >
+
+      {/* CSS for blinking animation */}
+      <style jsx>{`
+        @keyframes blink {
+          0%,
+          50% {
+            opacity: 1;
+          }
+          51%,
+          100% {
+            opacity: 0.5;
+          }
+        }
+      `}</style>
+    </Card>
   );
 }
 
 export default VolumePreview;
-
-
-// Volume Preview Settings Object Example
-// volumePreviewSettings = {
-//   {
-//     "bundleSettings": {
-//         "bundleName": "Bundle 1",
-//         "visibilitySettings": {
-//             "visibility": "all_products"
-//         },
-//         "headerSettings": {
-//             "headerText": "Choose your offer",
-//             "alignment": "center",
-//             "headerLine": true,
-//             "lineThickness": 2
-//         },
-//         "shapeSettings": {
-//             "blockRadius": 12,
-//             "blockThickness": 2
-//         },
-//         "checkmarkSettings": {
-//             "checkmarkVisibility": "show"
-//         }
-//     },
-//     "offerSettings": {
-//         "offers": [
-//             {
-//                 "id": "offer-1",
-//                 "title": "Single",
-//                 "subtitle": "Standard price",
-//                 "quantity": "1",
-//                 "image": null,
-//                 "priceType": "default",
-//                 "buyQuantity": "1",
-//                 "getQuantity": "1",
-//                 "highlight": false,
-//                 "selectedByDefault": true,
-//                 "tag": ""
-//                "highlightSettings": {
-//                  "type": "text",
-//                  "text": "MOST POPULARddd",
-//                  "blinking": false,
-//                  "style": "pill",
-//                  "shape": "square"
-//                }
-//             }
-//         ],
-//         "selectedOfferIndex": 0
-//     },
-//     "designSettings": {
-//         "backgroundColors": {
-//             "bundle": {
-//                 "red": 230,
-//                 "green": 230,
-//                 "blue": 230,
-//                 "alpha": 0.5
-//             },
-//             "border": {
-//                 "red": 128,
-//                 "green": 128,
-//                 "blue": 128,
-//                 "alpha": 1
-//             },
-//             "checkmark": {
-//                 "red": 0,
-//                 "green": 0,
-//                 "blue": 0,
-//                 "alpha": 1
-//             },
-//             "highlight": {
-//                 "red": 0,
-//                 "green": 0,
-//                 "blue": 0,
-//                 "alpha": 1
-//             },
-//             "selectedBundle": {
-//                 "red": 255,
-//                 "green": 255,
-//                 "blue": 255,
-//                 "alpha": 1
-//             },
-//             "borderSelectedBundle": {
-//                 "red": 0,
-//                 "green": 0,
-//                 "blue": 0,
-//                 "alpha": 1
-//             },
-//             "tags": {
-//                 "red": 128,
-//                 "green": 128,
-//                 "blue": 128,
-//                 "alpha": 0.5
-//             }
-//         },
-//         "pricingColors": {
-//             "price": {
-//                 "red": 0,
-//                 "green": 0,
-//                 "blue": 0,
-//                 "alpha": 1
-//             },
-//             "comparedPrice": {
-//                 "red": 255,
-//                 "green": 0,
-//                 "blue": 0,
-//                 "alpha": 1
-//             }
-//         },
-//         "textColors": {
-//             "header": {
-//                 "red": 0,
-//                 "green": 0,
-//                 "blue": 0,
-//                 "alpha": 1
-//             },
-//             "title": {
-//                 "red": 0,
-//                 "green": 0,
-//                 "blue": 0,
-//                 "alpha": 1
-//             },
-//             "subtitle": {
-//                 "red": 128,
-//                 "green": 128,
-//                 "blue": 128,
-//                 "alpha": 1
-//             },
-//             "highlight": {
-//                 "red": 255,
-//                 "green": 255,
-//                 "blue": 255,
-//                 "alpha": 1
-//             },
-//             "tags": {
-//                 "red": 128,
-//                 "green": 128,
-//                 "blue": 128,
-//                 "alpha": 1
-//             }
-//         },
-//         "typographySettings": {
-//             "header": {
-//                 "size": "16",
-//                 "fontStyle": "Bold"
-//             },
-//             "titlePrice": {
-//                 "size": "16",
-//                 "fontStyle": "Bold"
-//             },
-//             "subtitleComparedPrice": {
-//                 "size": "14",
-//                 "fontStyle": "Regular"
-//             },
-//             "tagHighlight": {
-//                 "size": "12",
-//                 "fontStyle": "Regular"
-//             }
-//         },
-//         "openColorPickerFor": null
-//     },
-//     "advancedSettings": {
-//         "variants": {
-//             "allowCustomerChoice": true,
-//             "hideThemeVariant": true,
-//             "hideOutOfStock": false,
-//             "hideThemePrice": true
-//         },
-//         "pricing": {
-//             "showPricesPerItem": false,
-//             "showCompareAtPrice": true
-//         }
-//     }
-//   }
-// }
