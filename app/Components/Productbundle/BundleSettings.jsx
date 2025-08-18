@@ -16,108 +16,203 @@ import {
 } from "@shopify/polaris";
 import { DeleteIcon, ImageAddIcon } from "@shopify/polaris-icons";
 
+// Default values to prevent undefined errors
+const DEFAULT_BASIC_SETTINGS = {
+  bundleName: '',
+  headerText: '',
+  alignment: 'left',
+  footerText: '',
+  buttonText: 'Add to Cart',
+  position: 'specific',
+  selectedColor: '#000000',
+  productImageSize: 50,
+  iconStyle: 'default'
+};
+
+const DEFAULT_PRICING_SETTINGS = {
+  option: 'default',
+  discountPercentage: '',
+  fixedDiscount: '',
+  fixedPrice: ''
+};
+
+const DEFAULT_HIGHLIGHT_SETTINGS = {
+  option: 'text',
+  title: '',
+  timerTitle: '',
+  isBlinking: false,
+  style: 'solid',
+  timerEndDate: '',
+  timerFormat: 'dd:hh:mm:ss'
+};
+
+const DEFAULT_DESIGN_SETTINGS = {
+  typography: {
+    header: { size: '18', weight: 'Bold' },
+    titlePrice: { size: '16', weight: 'Regular' }
+  },
+  spacing: {
+    bundleTop: '0',
+    bundleBottom: '0',
+    footerTop: '0',
+    footerBottom: '0'
+  },
+  shapes: {
+    bundle: 'Squared',
+    footer: 'Squared',
+    addToCart: 'Squared'
+  },
+  borderThickness: {
+    bundle: 0,
+    footer: 0,
+    addToCart: 0
+  },
+  colors: {
+    background: '#ffffff',
+    border: '#e1e5e9',
+    footerBackground: '#f6f6f7',
+    buttonBackground: '#000000',
+    highlightBackground: '#ff6b35',
+    quantityBackground: '#f6f6f7',
+    headerText: '#000000',
+    titleText: '#000000',
+    price: '#000000',
+    comparedPrice: '#999999',
+    highlightText: '#ffffff',
+    addToCartText: '#ffffff',
+    quantityText: '#000000',
+    footerText: '#000000'
+  }
+};
+
+const DEFAULT_GENERAL_SETTINGS = {
+  variantChoice: false,
+  showPrices: false,
+  showComparePrice: false
+};
+
 // Bundle Settings Card Component
 export default function BundleSettingsCard({
-  bundleName,
-  setBundleName,
-  headerText,
-  setHeaderText,
-  alignment,
-  setAlignment,
-  footerText,
-  setFooterText,
-  buttonText,
-  setButtonText,
-  position,
-  setPosition,
-
-  // selectedColor,
-  // setSelectedColor,
-  settings,
-  handleSettingChange,
-  // Pricing options
-  pricingOption,
-  setPricingOption,
-  discountPercentage,
-  setDiscountPercentage,
-  fixedDiscount,
-  setFixedDiscount,
-  fixedPrice,
-  setFixedPrice,
-  // Highlight options
-  highlightOption,
-  setHighlightOption,
-  highlightTitle,
-  setHighlightTitle,
-  highlightTimerTitle,
-  setHighlightTimerTitle,
-  isBlinking,
-  setIsBlinking,
-  highlightStyle,
-  setHighlightStyle,
-  timerEndDate,
-  setTimerEndDate,
-  timerFormat,
-  setTimerFormat,
-  // Products
-  products,
-  setProducts,
-  handleAddProduct,
-  handleRemoveProduct,
-  // Fonts and sizes
-  typography,
-  setTypography,
-  spacing,
-  setSpacing,
-  shapes,
-  setShapes,
-  productImageSize,
-  setProductImageSize,
-  borderThickness,
-  setBorderThickness,
-  // Colors
-  colors,
-  setColors,
+  // Grouped state objects with comprehensive defaults
+  basicSettings = DEFAULT_BASIC_SETTINGS,
+  setBasicSettings = () => {},
+  pricingSettings = DEFAULT_PRICING_SETTINGS,
+  setPricingSettings = () => {},
+  highlightSettings = DEFAULT_HIGHLIGHT_SETTINGS,
+  setHighlightSettings = () => {},
+  designSettings = DEFAULT_DESIGN_SETTINGS,
+  setDesignSettings = () => {},
+  generalSettings = DEFAULT_GENERAL_SETTINGS,
+  setGeneralSettings = () => {},
+  products = [],
+  setProducts = () => {},
+  // Product management handlers
+  handleAddProduct = () => {},
+  handleRemoveProduct = () => {},
+  handleSettingChange = () => {},
+  // Validation props (optional)
+  hasAllPositionBundle = false,
+  isEdit = false,
+  originalPosition = 'specific',
 }) {
   const [selected, setSelected] = useState(0);
 
-  // Existing handlers
+  // Merge props with defaults to ensure all properties exist
+  const safeBasicSettings = { ...DEFAULT_BASIC_SETTINGS, ...basicSettings };
+  const safePricingSettings = { ...DEFAULT_PRICING_SETTINGS, ...pricingSettings };
+  const safeHighlightSettings = { ...DEFAULT_HIGHLIGHT_SETTINGS, ...highlightSettings };
+  const safeDesignSettings = {
+    ...DEFAULT_DESIGN_SETTINGS,
+    ...designSettings,
+    typography: { ...DEFAULT_DESIGN_SETTINGS.typography, ...designSettings?.typography },
+    spacing: { ...DEFAULT_DESIGN_SETTINGS.spacing, ...designSettings?.spacing },
+    shapes: { ...DEFAULT_DESIGN_SETTINGS.shapes, ...designSettings?.shapes },
+    borderThickness: { ...DEFAULT_DESIGN_SETTINGS.borderThickness, ...designSettings?.borderThickness },
+    colors: { ...DEFAULT_DESIGN_SETTINGS.colors, ...designSettings?.colors }
+  };
+  const safeGeneralSettings = { ...DEFAULT_GENERAL_SETTINGS, ...generalSettings };
+
+  // Tab change handler
   const handleTabChange = useCallback(
     (selectedTabIndex) => setSelected(selectedTabIndex),
     [],
   );
 
+  // Safe update helpers with error handling
+  const updateBasicSetting = useCallback((key, value) => {
+    try {
+      if (typeof setBasicSettings === 'function') {
+        setBasicSettings(prev => ({ ...prev, [key]: value }));
+      }
+    } catch (error) {
+      console.warn('Error updating basic setting:', error);
+    }
+  }, [setBasicSettings]);
+
+  const updatePricingSetting = useCallback((key, value) => {
+    try {
+      if (typeof setPricingSettings === 'function') {
+        setPricingSettings(prev => ({ ...prev, [key]: value }));
+      }
+    } catch (error) {
+      console.warn('Error updating pricing setting:', error);
+    }
+  }, [setPricingSettings]);
+
+  const updateHighlightSetting = useCallback((key, value) => {
+    try {
+      if (typeof setHighlightSettings === 'function') {
+        setHighlightSettings(prev => ({ ...prev, [key]: value }));
+      }
+    } catch (error) {
+      console.warn('Error updating highlight setting:', error);
+    }
+  }, [setHighlightSettings]);
+
+  const updateDesignSetting = useCallback((key, value) => {
+    try {
+      if (typeof setDesignSettings === 'function') {
+        setDesignSettings(prev => ({ ...prev, [key]: value }));
+      }
+    } catch (error) {
+      console.warn('Error updating design setting:', error);
+    }
+  }, [setDesignSettings]);
+
   // Handler for pricing option changes
   const handlePricingOptionChange = useCallback(
-    (_, value) => setPricingOption(value),
-    [setPricingOption],
+    (_, value) => updatePricingSetting('option', value),
+    [updatePricingSetting],
   );
 
   // Handler for highlight option changes
   const handleHighlightOptionChange = useCallback(
-    (_, value) => setHighlightOption(value),
-    [setHighlightOption],
+    (_, value) => updateHighlightSetting('option', value),
+    [updateHighlightSetting],
   );
 
-  // Handler for template changes
+  // Handler for position changes
+  const handlePositionChange = useCallback(
+    (_, value) => updateBasicSetting('position', value),
+    [updateBasicSetting],
+  );
+
+  // Safe product update handler
+  const handleProductUpdate = useCallback((updatedProducts) => {
+    try {
+      if (typeof setProducts === 'function') {
+        setProducts(updatedProducts);
+      }
+    } catch (error) {
+      console.warn('Error updating products:', error);
+    }
+  }, [setProducts]);
 
   const tabs = [
-    {
-      id: "block",
-      content: "Block",
-    },
-    {
-      id: "offer",
-      content: "Offer",
-    },
-    {
-      id: "font-size",
-      content: "Font & size",
-    },
-    {
-      id: "colors",
-      content: "Colors",
-    },
+    { id: "block", content: "Block" },
+    { id: "offer", content: "Offer" },
+    { id: "font-size", content: "Font & size" },
+    { id: "colors", content: "Colors" },
   ];
 
   const alignmentOptions = [
@@ -125,11 +220,6 @@ export default function BundleSettingsCard({
     { label: "Center", value: "center" },
     { label: "Right", value: "right" },
   ];
-
-  const handlePositionChange = useCallback(
-    (_, value) => setPosition(value),
-    [],
-  );
 
   return (
     <>
@@ -145,8 +235,8 @@ export default function BundleSettingsCard({
             <BlockStack gap="400">
               <TextField
                 label="Bundle name"
-                value={bundleName}
-                onChange={setBundleName}
+                value={safeBasicSettings.bundleName}
+                onChange={(value) => updateBasicSetting('bundleName', value)}
                 autoComplete="off"
               />
 
@@ -154,8 +244,8 @@ export default function BundleSettingsCard({
                 <div style={{ flex: 1 }}>
                   <TextField
                     label="Header text"
-                    value={headerText}
-                    onChange={setHeaderText}
+                    value={safeBasicSettings.headerText}
+                    onChange={(value) => updateBasicSetting('headerText', value)}
                     autoComplete="off"
                     helpText="(optional)"
                   />
@@ -164,8 +254,8 @@ export default function BundleSettingsCard({
                   <Select
                     label="Alignment"
                     options={alignmentOptions}
-                    onChange={setAlignment}
-                    value={alignment}
+                    onChange={(value) => updateBasicSetting('alignment', value)}
+                    value={safeBasicSettings.alignment}
                   />
                 </div>
               </InlineStack>
@@ -174,16 +264,16 @@ export default function BundleSettingsCard({
                 <div style={{ flex: 1 }}>
                   <TextField
                     label="Footer text"
-                    value={footerText}
-                    onChange={setFooterText}
+                    value={safeBasicSettings.footerText}
+                    onChange={(value) => updateBasicSetting('footerText', value)}
                     autoComplete="off"
                   />
                 </div>
                 <div style={{ flex: 1 }}>
                   <TextField
                     label="Button text"
-                    value={buttonText}
-                    onChange={setButtonText}
+                    value={safeBasicSettings.buttonText}
+                    onChange={(value) => updateBasicSetting('buttonText', value)}
                     autoComplete="off"
                   />
                 </div>
@@ -195,28 +285,28 @@ export default function BundleSettingsCard({
                 </Text>
                 <RadioButton
                   label="All products"
-                  checked={position === "all"}
+                  checked={safeBasicSettings.position === "all"}
                   id="all"
                   name="position"
                   onChange={handlePositionChange}
                 />
                 <RadioButton
                   label="All products except selected"
-                  checked={position === "except"}
+                  checked={safeBasicSettings.position === "except"}
                   id="except"
                   name="position"
                   onChange={handlePositionChange}
                 />
                 <RadioButton
                   label="Specific products"
-                  checked={position === "specific"}
+                  checked={safeBasicSettings.position === "specific"}
                   id="specific"
                   name="position"
                   onChange={handlePositionChange}
                 />
                 <RadioButton
                   label="Specific collections"
-                  checked={position === "collections"}
+                  checked={safeBasicSettings.position === "collections"}
                   id="collections"
                   name="position"
                   onChange={handlePositionChange}
@@ -232,8 +322,16 @@ export default function BundleSettingsCard({
                   <input
                     type="checkbox"
                     id="variantChoice"
-                    checked={settings.variantChoice}
-                    onChange={() => handleSettingChange("variantChoice")}
+                    checked={safeGeneralSettings.variantChoice}
+                    onChange={() => {
+                      try {
+                        if (typeof handleSettingChange === 'function') {
+                          handleSettingChange("variantChoice");
+                        }
+                      } catch (error) {
+                        console.warn('Error handling setting change:', error);
+                      }
+                    }}
                     style={{ marginRight: "8px" }}
                   />
                   <label htmlFor="variantChoice">
@@ -245,8 +343,16 @@ export default function BundleSettingsCard({
                   <input
                     type="checkbox"
                     id="showPrices"
-                    checked={settings.showPrices}
-                    onChange={() => handleSettingChange("showPrices")}
+                    checked={safeGeneralSettings.showPrices}
+                    onChange={() => {
+                      try {
+                        if (typeof handleSettingChange === 'function') {
+                          handleSettingChange("showPrices");
+                        }
+                      } catch (error) {
+                        console.warn('Error handling setting change:', error);
+                      }
+                    }}
                     style={{ marginRight: "8px" }}
                   />
                   <label htmlFor="showPrices">Show prices per item</label>
@@ -256,8 +362,16 @@ export default function BundleSettingsCard({
                   <input
                     type="checkbox"
                     id="showComparePrice"
-                    checked={settings.showComparePrice}
-                    onChange={() => handleSettingChange("showComparePrice")}
+                    checked={safeGeneralSettings.showComparePrice}
+                    onChange={() => {
+                      try {
+                        if (typeof handleSettingChange === 'function') {
+                          handleSettingChange("showComparePrice");
+                        }
+                      } catch (error) {
+                        console.warn('Error handling setting change:', error);
+                      }
+                    }}
                     style={{ marginRight: "8px" }}
                   />
                   <label htmlFor="showComparePrice">
@@ -275,10 +389,10 @@ export default function BundleSettingsCard({
                 <Text variant="headingMd" as="h3">
                   Bundle
                 </Text>
-
+                
                 {/* Dynamic Product Cards */}
-                {products.map((product, index) => (
-                  <Card key={product.id} padding="0">
+                {Array.isArray(products) && products.map((product, index) => (
+                  <Card key={product?.id || index} padding="0">
                     <div
                       style={{
                         padding: "12px",
@@ -317,7 +431,7 @@ export default function BundleSettingsCard({
                           justifyContent: "center",
                         }}
                       >
-                        {product.image ? (
+                        {product?.image ? (
                           <img
                             style={{ width: "100%", height: "100%" }}
                             src={product.image}
@@ -331,38 +445,45 @@ export default function BundleSettingsCard({
                         <Button
                           fullWidth
                           onClick={() => {
-                            // Open the product selector modal
-                            window.shopify
-                              .resourcePicker({
-                                type: "product",
-                                action: "select",
-                                multiple: false,
-                                filter: {
-                                  hidden: false,
-                                  variants: false,
-                                  draft: false,
-                                  archived: false,
-                                  query: "total_inventory:>0",
-                                },
-                              })
-                              .then(({ selection }) => {
-                                if (selection && selection.length > 0) {
-                                  const selectedProduct = selection[0];
-                                  const updatedProducts = [...products];
-                                  updatedProducts[index] = {
-                                    ...updatedProducts[index],
-                                    name: selectedProduct.title,
-                                    productId: selectedProduct.id,
-                                    image:
-                                      selectedProduct.images[0]?.originalSrc,
-                                    productHandle: selectedProduct.handle,
-                                  };
-                                  setProducts(updatedProducts);
-                                }
-                              });
+                            try {
+                              if (typeof window !== 'undefined' && window.shopify) {
+                                window.shopify
+                                  .resourcePicker({
+                                    type: "product",
+                                    action: "select",
+                                    multiple: false,
+                                    filter: {
+                                      hidden: false,
+                                      variants: false,
+                                      draft: false,
+                                      archived: false,
+                                      query: "total_inventory:>0",
+                                    },
+                                  })
+                                  .then(({ selection }) => {
+                                    if (selection && selection.length > 0) {
+                                      const selectedProduct = selection[0];
+                                      const updatedProducts = [...products];
+                                      updatedProducts[index] = {
+                                        ...updatedProducts[index],
+                                        name: selectedProduct.title,
+                                        productId: selectedProduct.id,
+                                        image: selectedProduct.images?.[0]?.originalSrc,
+                                        productHandle: selectedProduct.handle,
+                                      };
+                                      handleProductUpdate(updatedProducts);
+                                    }
+                                  })
+                                  .catch(error => {
+                                    console.warn('Error selecting product:', error);
+                                  });
+                              }
+                            } catch (error) {
+                              console.warn('Error opening product selector:', error);
+                            }
                           }}
                         >
-                          {product.name || `Select product ${index + 1}`}
+                          {product?.name || `Select product ${index + 1}`}
                         </Button>
                       </div>
                       <div style={{ width: "100px" }}>
@@ -371,26 +492,51 @@ export default function BundleSettingsCard({
                           labelHidden
                           type="number"
                           prefix="Qty"
-                          value={product.quantity.toString()}
+                          value={String(product?.quantity || 1)}
                           onChange={(value) => {
-                            const updatedProducts = [...products];
-                            updatedProducts[index].quantity =
-                              parseInt(value) || 1;
-                            setProducts(updatedProducts);
+                            try {
+                              const updatedProducts = [...products];
+                              updatedProducts[index] = {
+                                ...updatedProducts[index],
+                                quantity: parseInt(value) || 1
+                              };
+                              handleProductUpdate(updatedProducts);
+                            } catch (error) {
+                              console.warn('Error updating quantity:', error);
+                            }
                           }}
                           autoComplete="off"
                         />
                       </div>
                       <Button
                         icon={DeleteIcon}
-                        onClick={() => handleRemoveProduct(product.id)}
+                        onClick={() => {
+                          try {
+                            if (typeof handleRemoveProduct === 'function') {
+                              handleRemoveProduct(product?.id || index);
+                            }
+                          } catch (error) {
+                            console.warn('Error removing product:', error);
+                          }
+                        }}
                       />
                     </div>
                   </Card>
                 ))}
 
                 {/* Add new product button */}
-                <Button fullWidth onClick={handleAddProduct}>
+                <Button 
+                  fullWidth 
+                  onClick={() => {
+                    try {
+                      if (typeof handleAddProduct === 'function') {
+                        handleAddProduct();
+                      }
+                    } catch (error) {
+                      console.warn('Error adding product:', error);
+                    }
+                  }}
+                >
                   Add a new product
                 </Button>
               </BlockStack>
@@ -413,67 +559,63 @@ export default function BundleSettingsCard({
 
                 <RadioButton
                   label="Default"
-                  checked={pricingOption === "default"}
+                  checked={safePricingSettings.option === "default"}
                   id="default"
                   name="pricingOption"
                   onChange={handlePricingOptionChange}
                 />
 
-                <div
-                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
-                >
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <RadioButton
                     label="Discount value in %"
-                    checked={pricingOption === "percentage"}
+                    checked={safePricingSettings.option === "percentage"}
                     id="percentage"
                     name="pricingOption"
                     onChange={handlePricingOptionChange}
                   />
-                  {pricingOption === "percentage" && (
+                  {safePricingSettings.option === "percentage" && (
                     <Text variant="bodyMd" as="span" tone="subdued">
                       (example: 10% off)
                     </Text>
                   )}
                 </div>
-                {pricingOption === "percentage" && (
+                {safePricingSettings.option === "percentage" && (
                   <div style={{ marginLeft: "28px", marginTop: "4px" }}>
                     <TextField
                       label="Discount percentage"
                       labelHidden
                       type="number"
                       suffix="%"
-                      value={discountPercentage}
-                      onChange={setDiscountPercentage}
+                      value={safePricingSettings.discountPercentage}
+                      onChange={(value) => updatePricingSetting('discountPercentage', value)}
                       autoComplete="off"
                     />
                   </div>
                 )}
 
-                <div
-                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
-                >
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <RadioButton
                     label="Fixed discount $ per item"
-                    checked={pricingOption === "fixedDiscount"}
+                    checked={safePricingSettings.option === "fixedDiscount"}
                     id="fixedDiscount"
                     name="pricingOption"
                     onChange={handlePricingOptionChange}
                   />
-                  {pricingOption === "fixedDiscount" && (
+                  {safePricingSettings.option === "fixedDiscount" && (
                     <Text variant="bodyMd" as="span" tone="subdued">
                       (example: 25$ off)
                     </Text>
                   )}
                 </div>
-                {pricingOption === "fixedDiscount" && (
+                {safePricingSettings.option === "fixedDiscount" && (
                   <div style={{ marginLeft: "28px", marginTop: "4px" }}>
                     <TextField
                       label="Fixed discount amount"
                       labelHidden
                       type="number"
                       prefix="$"
-                      value={fixedDiscount}
-                      onChange={setFixedDiscount}
+                      value={safePricingSettings.fixedDiscount}
+                      onChange={(value) => updatePricingSetting('fixedDiscount', value)}
                       autoComplete="off"
                     />
                   </div>
@@ -481,20 +623,20 @@ export default function BundleSettingsCard({
 
                 <RadioButton
                   label="Fixed price for the bundle"
-                  checked={pricingOption === "fixedPrice"}
+                  checked={safePricingSettings.option === "fixedPrice"}
                   id="fixedPrice"
                   name="pricingOption"
                   onChange={handlePricingOptionChange}
                 />
-                {pricingOption === "fixedPrice" && (
+                {safePricingSettings.option === "fixedPrice" && (
                   <div style={{ marginLeft: "28px", marginTop: "4px" }}>
                     <TextField
                       label="Fixed bundle price"
                       labelHidden
                       type="number"
                       prefix="$"
-                      value={fixedPrice}
-                      onChange={setFixedPrice}
+                      value={safePricingSettings.fixedPrice}
+                      onChange={(value) => updatePricingSetting('fixedPrice', value)}
                       autoComplete="off"
                     />
                   </div>
@@ -509,7 +651,7 @@ export default function BundleSettingsCard({
                 <BlockStack>
                   <RadioButton
                     label="Text"
-                    checked={highlightOption === "text"}
+                    checked={safeHighlightSettings.option === "text"}
                     id="text"
                     name="highlightOption"
                     onChange={handleHighlightOptionChange}
@@ -517,18 +659,18 @@ export default function BundleSettingsCard({
 
                   <RadioButton
                     label="Timer"
-                    checked={highlightOption === "timer"}
+                    checked={safeHighlightSettings.option === "timer"}
                     id="timer"
                     name="highlightOption"
                     onChange={handleHighlightOptionChange}
                   />
 
-                  {highlightOption === "text" && (
+                  {safeHighlightSettings.option === "text" && (
                     <div style={{ marginLeft: "28px", marginTop: "4px" }}>
                       <TextField
                         label="Title"
-                        value={highlightTitle}
-                        onChange={setHighlightTitle}
+                        value={safeHighlightSettings.title}
+                        onChange={(value) => updateHighlightSetting('title', value)}
                         autoComplete="off"
                       />
 
@@ -541,8 +683,8 @@ export default function BundleSettingsCard({
                         <input
                           type="checkbox"
                           id="blinking"
-                          checked={isBlinking}
-                          onChange={() => setIsBlinking(!isBlinking)}
+                          checked={safeHighlightSettings.isBlinking}
+                          onChange={(e) => updateHighlightSetting('isBlinking', e.target.checked)}
                           style={{ marginRight: "8px" }}
                         />
                         <label htmlFor="blinking">Blinking</label>
@@ -556,27 +698,27 @@ export default function BundleSettingsCard({
                             { label: "Outline", value: "outline" },
                             { label: "Soft", value: "soft" },
                           ]}
-                          onChange={setHighlightStyle}
-                          value={highlightStyle}
+                          onChange={(value) => updateHighlightSetting('style', value)}
+                          value={safeHighlightSettings.style}
                         />
                       </div>
                     </div>
                   )}
 
-                  {highlightOption === "timer" && (
+                  {safeHighlightSettings.option === "timer" && (
                     <div style={{ marginLeft: "28px", marginTop: "4px" }}>
                       <TextField
                         label="Title"
-                        value={highlightTimerTitle}
-                        onChange={setHighlightTimerTitle}
+                        value={safeHighlightSettings.timerTitle}
+                        onChange={(value) => updateHighlightSetting('timerTitle', value)}
                         autoComplete="off"
                       />
 
                       <TextField
                         label="End date"
                         type="datetime-local"
-                        value={timerEndDate}
-                        onChange={setTimerEndDate}
+                        value={safeHighlightSettings.timerEndDate}
+                        onChange={(value) => updateHighlightSetting('timerEndDate', value)}
                         autoComplete="off"
                       />
 
@@ -588,8 +730,8 @@ export default function BundleSettingsCard({
                             { label: "HH:MM:SS", value: "hh:mm:ss" },
                             { label: "MM:SS", value: "mm:ss" },
                           ]}
-                          onChange={setTimerFormat}
-                          value={timerFormat}
+                          onChange={(value) => updateHighlightSetting('timerFormat', value)}
+                          value={safeHighlightSettings.timerFormat}
                         />
                       </div>
 
@@ -601,8 +743,8 @@ export default function BundleSettingsCard({
                             { label: "Outline", value: "outline" },
                             { label: "Soft", value: "soft" },
                           ]}
-                          onChange={setHighlightStyle}
-                          value={highlightStyle}
+                          onChange={(value) => updateHighlightSetting('style', value)}
+                          value={safeHighlightSettings.style}
                         />
                       </div>
                     </div>
@@ -625,12 +767,12 @@ export default function BundleSettingsCard({
                     <TextField
                       label="Header Size"
                       type="number"
-                      value={typography?.header?.size || "18"}
+                      value={safeDesignSettings.typography?.header?.size || "18"}
                       onChange={(value) =>
-                        setTypography((prev) => ({
-                          ...prev,
-                          header: { ...prev?.header, size: value },
-                        }))
+                        updateDesignSetting('typography', {
+                          ...safeDesignSettings.typography,
+                          header: { ...safeDesignSettings.typography?.header, size: value },
+                        })
                       }
                       autoComplete="off"
                     />
@@ -643,12 +785,12 @@ export default function BundleSettingsCard({
                         { label: "Regular", value: "Regular" },
                         { label: "Bold", value: "Bold" },
                       ]}
-                      value={typography?.header?.weight || "Bold"}
+                      value={safeDesignSettings.typography?.header?.weight || "Bold"}
                       onChange={(value) =>
-                        setTypography((prev) => ({
-                          ...prev,
-                          header: { ...prev?.header, weight: value },
-                        }))
+                        updateDesignSetting('typography', {
+                          ...safeDesignSettings.typography,
+                          header: { ...safeDesignSettings.typography?.header, weight: value },
+                        })
                       }
                     />
                   </div>
@@ -660,12 +802,12 @@ export default function BundleSettingsCard({
                     <TextField
                       label="Title & price Size"
                       type="number"
-                      value={typography?.titlePrice?.size || "16"}
+                      value={safeDesignSettings.typography?.titlePrice?.size || "16"}
                       onChange={(value) =>
-                        setTypography((prev) => ({
-                          ...prev,
-                          titlePrice: { ...prev?.titlePrice, size: value },
-                        }))
+                        updateDesignSetting('typography', {
+                          ...safeDesignSettings.typography,
+                          titlePrice: { ...safeDesignSettings.typography?.titlePrice, size: value },
+                        })
                       }
                       autoComplete="off"
                     />
@@ -677,12 +819,12 @@ export default function BundleSettingsCard({
                         { label: "Regular", value: "Regular" },
                         { label: "Bold", value: "Bold" },
                       ]}
-                      value={typography?.titlePrice?.weight || "Normal"}
+                      value={safeDesignSettings.typography?.titlePrice?.weight || "Regular"}
                       onChange={(value) =>
-                        setTypography((prev) => ({
-                          ...prev,
-                          titlePrice: { ...prev?.titlePrice, weight: value },
-                        }))
+                        updateDesignSetting('typography', {
+                          ...safeDesignSettings.typography,
+                          titlePrice: { ...safeDesignSettings.typography?.titlePrice, weight: value },
+                        })
                       }
                     />
                   </div>
@@ -698,10 +840,13 @@ export default function BundleSettingsCard({
                       <TextField
                         label="Bundle top"
                         type="number"
-                        value={spacing.bundleTop}
+                        value={safeDesignSettings.spacing?.bundleTop || '0'}
                         suffix="px"
                         onChange={(value) =>
-                          setSpacing((prev) => ({ ...prev, bundleTop: value }))
+                          updateDesignSetting('spacing', {
+                            ...safeDesignSettings.spacing,
+                            bundleTop: value
+                          })
                         }
                         autoComplete="off"
                       />
@@ -710,13 +855,13 @@ export default function BundleSettingsCard({
                       <TextField
                         label="Bundle bottom"
                         type="number"
-                        value={spacing.bundleBottom}
+                        value={safeDesignSettings.spacing?.bundleBottom || '0'}
                         suffix="px"
                         onChange={(value) =>
-                          setSpacing((prev) => ({
-                            ...prev,
-                            bundleBottom: value,
-                          }))
+                          updateDesignSetting('spacing', {
+                            ...safeDesignSettings.spacing,
+                            bundleBottom: value
+                          })
                         }
                         autoComplete="off"
                       />
@@ -728,10 +873,13 @@ export default function BundleSettingsCard({
                       <TextField
                         label="Footer top"
                         type="number"
-                        value={spacing.footerTop}
+                        value={safeDesignSettings.spacing?.footerTop || '0'}
                         suffix="px"
                         onChange={(value) =>
-                          setSpacing((prev) => ({ ...prev, footerTop: value }))
+                          updateDesignSetting('spacing', {
+                            ...safeDesignSettings.spacing,
+                            footerTop: value
+                          })
                         }
                         autoComplete="off"
                       />
@@ -740,13 +888,13 @@ export default function BundleSettingsCard({
                       <TextField
                         label="Footer bottom"
                         type="number"
-                        value={spacing.footerBottom}
+                        value={safeDesignSettings.spacing?.footerBottom || '0'}
                         suffix="px"
                         onChange={(value) =>
-                          setSpacing((prev) => ({
-                            ...prev,
-                            footerBottom: value,
-                          }))
+                          updateDesignSetting('spacing', {
+                            ...safeDesignSettings.spacing,
+                            footerBottom: value
+                          })
                         }
                         autoComplete="off"
                       />
@@ -765,9 +913,12 @@ export default function BundleSettingsCard({
                       { label: "Squared", value: "Squared" },
                       { label: "Rounded", value: "Rounded" },
                     ]}
-                    value={shapes.bundle}
+                    value={safeDesignSettings.shapes?.bundle || 'Squared'}
                     onChange={(value) =>
-                      setShapes((prev) => ({ ...prev, bundle: value }))
+                      updateDesignSetting('shapes', {
+                        ...safeDesignSettings.shapes,
+                        bundle: value
+                      })
                     }
                   />
 
@@ -777,9 +928,12 @@ export default function BundleSettingsCard({
                       { label: "Squared", value: "Squared" },
                       { label: "Rounded", value: "Rounded" },
                     ]}
-                    value={shapes.footer}
+                    value={safeDesignSettings.shapes?.footer || 'Squared'}
                     onChange={(value) =>
-                      setShapes((prev) => ({ ...prev, footer: value }))
+                      updateDesignSetting('shapes', {
+                        ...safeDesignSettings.shapes,
+                        footer: value
+                      })
                     }
                   />
 
@@ -789,9 +943,12 @@ export default function BundleSettingsCard({
                       { label: "Squared", value: "Squared" },
                       { label: "Rounded", value: "Rounded" },
                     ]}
-                    value={shapes.addToCart}
+                    value={safeDesignSettings.shapes?.addToCart || 'Squared'}
                     onChange={(value) =>
-                      setShapes((prev) => ({ ...prev, addToCart: value }))
+                      updateDesignSetting('shapes', {
+                        ...safeDesignSettings.shapes,
+                        addToCart: value
+                      })
                     }
                   />
 
@@ -802,12 +959,12 @@ export default function BundleSettingsCard({
                       type="range"
                       min="30"
                       max="80"
-                      value={productImageSize}
-                      onChange={(e) => setProductImageSize(e.target.value)}
+                      value={safeBasicSettings.productImageSize}
+                      onChange={(e) => updateBasicSetting('productImageSize', e.target.value)}
                       style={{ width: "100%" }}
                     />
                     <div style={{ textAlign: "right" }}>
-                      {productImageSize}px
+                      {safeBasicSettings.productImageSize}px
                     </div>
                   </div>
                 </BlockStack>
@@ -823,17 +980,17 @@ export default function BundleSettingsCard({
                       type="range"
                       min="0"
                       max="5"
-                      value={borderThickness.bundle}
+                      value={safeDesignSettings.borderThickness?.bundle || 0}
                       onChange={(e) =>
-                        setBorderThickness((prev) => ({
-                          ...prev,
+                        updateDesignSetting('borderThickness', {
+                          ...safeDesignSettings.borderThickness,
                           bundle: e.target.value,
-                        }))
+                        })
                       }
                       style={{ width: "100%" }}
                     />
                     <div style={{ textAlign: "right" }}>
-                      {borderThickness.bundle}px
+                      {safeDesignSettings.borderThickness?.bundle || 0}px
                     </div>
                   </div>
 
@@ -843,17 +1000,17 @@ export default function BundleSettingsCard({
                       type="range"
                       min="0"
                       max="5"
-                      value={borderThickness.footer}
+                      value={safeDesignSettings.borderThickness?.footer || 0}
                       onChange={(e) =>
-                        setBorderThickness((prev) => ({
-                          ...prev,
+                        updateDesignSetting('borderThickness', {
+                          ...safeDesignSettings.borderThickness,
                           footer: e.target.value,
-                        }))
+                        })
                       }
                       style={{ width: "100%" }}
                     />
                     <div style={{ textAlign: "right" }}>
-                      {borderThickness.footer}px
+                      {safeDesignSettings.borderThickness?.footer || 0}px
                     </div>
                   </div>
 
@@ -863,17 +1020,17 @@ export default function BundleSettingsCard({
                       type="range"
                       min="0"
                       max="5"
-                      value={borderThickness.addToCart}
+                      value={safeDesignSettings.borderThickness?.addToCart || 0}
                       onChange={(e) =>
-                        setBorderThickness((prev) => ({
-                          ...prev,
+                        updateDesignSetting('borderThickness', {
+                          ...safeDesignSettings.borderThickness,
                           addToCart: e.target.value,
-                        }))
+                        })
                       }
                       style={{ width: "100%" }}
                     />
                     <div style={{ textAlign: "right" }}>
-                      {borderThickness.addToCart}px
+                      {safeDesignSettings.borderThickness?.addToCart || 0}px
                     </div>
                   </div>
                 </BlockStack>
@@ -894,12 +1051,12 @@ export default function BundleSettingsCard({
                     <Text>Background</Text>
                     <input
                       type="color"
-                      value={colors?.background || "#ffffff"}
+                      value={safeDesignSettings.colors?.background || "#ffffff"}
                       onChange={(e) =>
-                        setColors((prev) => ({
-                          ...prev,
+                        updateDesignSetting('colors', {
+                          ...safeDesignSettings.colors,
                           background: e.target.value,
-                        }))
+                        })
                       }
                       style={{ width: "100%", height: "36px" }}
                     />
@@ -908,12 +1065,12 @@ export default function BundleSettingsCard({
                     <Text>Border</Text>
                     <input
                       type="color"
-                      value={colors?.border || "#e1e5e9"}
+                      value={safeDesignSettings.colors?.border || "#e1e5e9"}
                       onChange={(e) =>
-                        setColors((prev) => ({
-                          ...prev,
+                        updateDesignSetting('colors', {
+                          ...safeDesignSettings.colors,
                           border: e.target.value,
-                        }))
+                        })
                       }
                       style={{ width: "100%", height: "36px" }}
                     />
@@ -925,12 +1082,12 @@ export default function BundleSettingsCard({
                     <Text>Footer background</Text>
                     <input
                       type="color"
-                      value={colors?.footerBackground || "#f6f6f7"}
+                      value={safeDesignSettings.colors?.footerBackground || "#f6f6f7"}
                       onChange={(e) =>
-                        setColors((prev) => ({
-                          ...prev,
+                        updateDesignSetting('colors', {
+                          ...safeDesignSettings.colors,
                           footerBackground: e.target.value,
-                        }))
+                        })
                       }
                       style={{ width: "100%", height: "36px" }}
                     />
@@ -939,12 +1096,12 @@ export default function BundleSettingsCard({
                     <Text>Button background</Text>
                     <input
                       type="color"
-                      value={colors?.buttonBackground || "#000000"}
+                      value={safeDesignSettings.colors?.buttonBackground || "#000000"}
                       onChange={(e) =>
-                        setColors((prev) => ({
-                          ...prev,
+                        updateDesignSetting('colors', {
+                          ...safeDesignSettings.colors,
                           buttonBackground: e.target.value,
-                        }))
+                        })
                       }
                       style={{ width: "100%", height: "36px" }}
                     />
@@ -956,12 +1113,12 @@ export default function BundleSettingsCard({
                     <Text>Highlight background</Text>
                     <input
                       type="color"
-                      value={colors?.highlightBackground || "#ff6b35"}
+                      value={safeDesignSettings.colors?.highlightBackground || "#ff6b35"}
                       onChange={(e) =>
-                        setColors((prev) => ({
-                          ...prev,
+                        updateDesignSetting('colors', {
+                          ...safeDesignSettings.colors,
                           highlightBackground: e.target.value,
-                        }))
+                        })
                       }
                       style={{ width: "100%", height: "36px" }}
                     />
@@ -970,12 +1127,12 @@ export default function BundleSettingsCard({
                     <Text>Quantity background</Text>
                     <input
                       type="color"
-                      value={colors?.quantityBackground || "#f6f6f7"}
+                      value={safeDesignSettings.colors?.quantityBackground || "#f6f6f7"}
                       onChange={(e) =>
-                        setColors((prev) => ({
-                          ...prev,
+                        updateDesignSetting('colors', {
+                          ...safeDesignSettings.colors,
                           quantityBackground: e.target.value,
-                        }))
+                        })
                       }
                       style={{ width: "100%", height: "36px" }}
                     />
@@ -992,12 +1149,12 @@ export default function BundleSettingsCard({
                     <Text>Header</Text>
                     <input
                       type="color"
-                      value={colors?.headerText || "#000000"}
+                      value={safeDesignSettings.colors?.headerText || "#000000"}
                       onChange={(e) =>
-                        setColors((prev) => ({
-                          ...prev,
+                        updateDesignSetting('colors', {
+                          ...safeDesignSettings.colors,
                           headerText: e.target.value,
-                        }))
+                        })
                       }
                       style={{ width: "100%", height: "36px" }}
                     />
@@ -1006,12 +1163,12 @@ export default function BundleSettingsCard({
                     <Text>Title</Text>
                     <input
                       type="color"
-                      value={colors?.titleText || "#000000"}
+                      value={safeDesignSettings.colors?.titleText || "#000000"}
                       onChange={(e) =>
-                        setColors((prev) => ({
-                          ...prev,
+                        updateDesignSetting('colors', {
+                          ...safeDesignSettings.colors,
                           titleText: e.target.value,
-                        }))
+                        })
                       }
                       style={{ width: "100%", height: "36px" }}
                     />
@@ -1023,12 +1180,12 @@ export default function BundleSettingsCard({
                     <Text>Price</Text>
                     <input
                       type="color"
-                      value={colors?.price || "#000000"}
+                      value={safeDesignSettings.colors?.price || "#000000"}
                       onChange={(e) =>
-                        setColors((prev) => ({
-                          ...prev,
+                        updateDesignSetting('colors', {
+                          ...safeDesignSettings.colors,
                           price: e.target.value,
-                        }))
+                        })
                       }
                       style={{ width: "100%", height: "36px" }}
                     />
@@ -1037,12 +1194,12 @@ export default function BundleSettingsCard({
                     <Text>Compared Price</Text>
                     <input
                       type="color"
-                      value={colors?.comparedPrice || "#999999"}
+                      value={safeDesignSettings.colors?.comparedPrice || "#999999"}
                       onChange={(e) =>
-                        setColors((prev) => ({
-                          ...prev,
+                        updateDesignSetting('colors', {
+                          ...safeDesignSettings.colors,
                           comparedPrice: e.target.value,
-                        }))
+                        })
                       }
                       style={{ width: "100%", height: "36px" }}
                     />
@@ -1054,12 +1211,12 @@ export default function BundleSettingsCard({
                     <Text>Highlight text</Text>
                     <input
                       type="color"
-                      value={colors?.highlightText || "#ffffff"}
+                      value={safeDesignSettings.colors?.highlightText || "#ffffff"}
                       onChange={(e) =>
-                        setColors((prev) => ({
-                          ...prev,
+                        updateDesignSetting('colors', {
+                          ...safeDesignSettings.colors,
                           highlightText: e.target.value,
-                        }))
+                        })
                       }
                       style={{ width: "100%", height: "36px" }}
                     />
@@ -1068,12 +1225,12 @@ export default function BundleSettingsCard({
                     <Text>Add to cart text</Text>
                     <input
                       type="color"
-                      value={colors?.addToCartText || "#ffffff"}
+                      value={safeDesignSettings.colors?.addToCartText || "#ffffff"}
                       onChange={(e) =>
-                        setColors((prev) => ({
-                          ...prev,
+                        updateDesignSetting('colors', {
+                          ...safeDesignSettings.colors,
                           addToCartText: e.target.value,
-                        }))
+                        })
                       }
                       style={{ width: "100%", height: "36px" }}
                     />
@@ -1085,12 +1242,12 @@ export default function BundleSettingsCard({
                     <Text>Quantity text</Text>
                     <input
                       type="color"
-                      value={colors?.quantityText || "#000000"}
+                      value={safeDesignSettings.colors?.quantityText || "#000000"}
                       onChange={(e) =>
-                        setColors((prev) => ({
-                          ...prev,
+                        updateDesignSetting('colors', {
+                          ...safeDesignSettings.colors,
                           quantityText: e.target.value,
-                        }))
+                        })
                       }
                       style={{ width: "100%", height: "36px" }}
                     />
@@ -1099,12 +1256,12 @@ export default function BundleSettingsCard({
                     <Text>Footer text</Text>
                     <input
                       type="color"
-                      value={colors?.footerText || "#000000"}
+                      value={safeDesignSettings.colors?.footerText || "#000000"}
                       onChange={(e) =>
-                        setColors((prev) => ({
-                          ...prev,
+                        updateDesignSetting('colors', {
+                          ...safeDesignSettings.colors,
                           footerText: e.target.value,
-                        }))
+                        })
                       }
                       style={{ width: "100%", height: "36px" }}
                     />
@@ -1113,9 +1270,7 @@ export default function BundleSettingsCard({
               </BlockStack>
             </BlockStack>
           )}
-
-          {/* Other tabs content */}
-        </div>
+        </div>  
       </LegacyCard>
     </>
   );
