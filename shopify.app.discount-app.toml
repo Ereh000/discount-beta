@@ -3,22 +3,22 @@
 client_id = "6151641bf090717bc67f80db6d2f9c01"
 name = "discount-app"
 handle = "discount-app-1172"
-application_url = "https://blame-productive-sapphire-hunter.trycloudflare.com"
+application_url = "https://floor-believes-chorus-abilities.trycloudflare.com"
 embedded = true
-
-[build]
-automatically_update_urls_on_dev = true
-include_config_on_deploy = true
 
 [webhooks]
 api_version = "2025-07"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_products,write_discounts,read_discounts,write_discounts_allocator_functions,write_products"
+scopes = "read_products,write_discounts,write_discounts_allocator_functions,write_products"
 
 [auth]
-redirect_urls = ["https://blame-productive-sapphire-hunter.trycloudflare.com/auth/callback", "https://blame-productive-sapphire-hunter.trycloudflare.com/auth/shopify/callback", "https://blame-productive-sapphire-hunter.trycloudflare.com/api/auth/callback"]
+redirect_urls = [
+  "https://floor-believes-chorus-abilities.trycloudflare.com/auth/callback",
+  "https://floor-believes-chorus-abilities.trycloudflare.com/auth/shopify/callback",
+  "https://floor-believes-chorus-abilities.trycloudflare.com/api/auth/callback"
+]
 
 [pos]
 embedded = false

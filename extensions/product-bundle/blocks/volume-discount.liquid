@@ -4,6 +4,20 @@
   <div class="vs-container">
     <!-- Content will be dynamically generated -->
   </div>
+
+  <input
+    class="quantity__input"
+    type="hidden"
+    name="quantity"
+    id="Quantity-template--19023967846627__main"
+    data-cart-quantity="0"
+    data-min="1"
+    min="1"
+    step="1"
+    value="1"
+    form="product-form-template--19023967846627__main"
+    fdprocessedid="le18gb"
+  >
 </div>
 
 {% schema %}
@@ -32,9 +46,10 @@
     // Get shop URL from Shopify global
     const shopUrl = `https://${window.Shopify.shop}`;
 
-    // Get current product data
+    // Get current product data - FIXED PRICE HANDLING
     const productData = {
-      price: {{ product.price | money_without_currency | json }},
+      price: {{ product.price | json }}, // This gives price in cents/paise
+      priceInRupees: {{ product.price | json }} / 100, // Convert to rupees
       id: {{ product.id | json }},
       handle: {{ product.handle | json }},
       variants: {{ product.variants | json }}
@@ -42,8 +57,212 @@
 
     let selectedOfferIndex = 0;
     let currentVolumeData = null;
+    let originalQuantity = 1;
 
-    // Helper to convert RGBA object to CSS rgba() string
+    // === FIXED PRICE HELPER FUNCTIONS ===
+
+    // Helper to format price properly
+    const formatPrice = (priceInCents) => {
+      const priceInRupees = priceInCents / 100;
+      return `₹${priceInRupees.toFixed(2)}`;
+    };
+
+    // Helper to calculate discounted price - FIXED
+    const calculatePrice = (offer, basePriceInCents) => {
+      if (!offer || !offer.priceAmount || offer.priceAmount === "") {
+        return basePriceInCents;
+      }
+
+      const discountValue = parseFloat(offer.priceAmount);
+      
+      if (offer.priceValue === "discount_percentage") {
+        return basePriceInCents - (basePriceInCents * discountValue / 100);
+      } else if (offer.priceValue === "fixed_amount") {
+        // Convert fixed amount to cents before calculation
+        const fixedAmountInCents = discountValue * 100;
+        return Math.max(0, basePriceInCents - fixedAmountInCents);
+      }
+      
+      return basePriceInCents;
+    };
+
+    // Helper to generate pricing for offers - FIXED
+    const generateOfferPricing = (offer) => {
+      const basePricePerItemInCents = productData.price; // Already in cents
+      const quantity = parseInt(offer.quantity) || 1;
+      const totalBasePriceInCents = basePricePerItemInCents * quantity;
+      
+      if (offer.priceAmount && offer.priceAmount !== "") {
+        const discountedPriceInCents = calculatePrice(offer, totalBasePriceInCents);
+        return {
+          price: discountedPriceInCents,
+          compareAtPrice: totalBasePriceInCents > discountedPriceInCents ? totalBasePriceInCents : null,
+          pricePerItem: discountedPriceInCents / quantity
+        };
+      }
+      
+      return { 
+        price: totalBasePriceInCents, 
+        compareAtPrice: null,
+        pricePerItem: basePricePerItemInCents
+      };
+    };
+
+    // === THEME INTEGRATION FUNCTIONS (unchanged) ===
+
+    const findQuantityElements = () => {
+      const quantityElements = {
+        input: null,
+        increaseBtn: null,
+        decreaseBtn: null,
+        form: null
+      };
+
+      const quantitySelectors = [
+        'input[name="quantity"]',
+        '.quantity__input',
+        '.product-form__quantity input',
+        '.quantity-selector input[type="number"]',
+        'input.qty'
+      ];
+
+      for (const selector of quantitySelectors) {
+        quantityElements.input = document.querySelector(selector);
+        if (quantityElements.input) break;
+      }
+
+      if (quantityElements.input) {
+        quantityElements.form = quantityElements.input.closest('form');
+        
+        const container = quantityElements.input.closest('.quantity') || 
+                         quantityElements.input.closest('.product-form__quantity') ||
+                         quantityElements.input.parentElement;
+        
+        if (container) {
+          quantityElements.increaseBtn = container.querySelector('[data-quantity="plus"], .quantity__button[data-quantity="plus"], .btn-plus');
+          quantityElements.decreaseBtn = container.querySelector('[data-quantity="minus"], .quantity__button[data-quantity="minus"], .btn-minus');
+        }
+      }
+
+      return quantityElements;
+    };
+
+    const updateThemeQuantity = (newQuantity) => {
+      const elements = findQuantityElements();
+      
+      if (!elements.input) {
+        console.warn('Quantity input not found in theme');
+        return;
+      }
+
+      const quantity = parseInt(newQuantity) || 1;
+      elements.input.value = quantity;
+      
+      const changeEvent = new Event('change', { bubbles: true });
+      const inputEvent = new Event('input', { bubbles: true });
+      
+      elements.input.dispatchEvent(inputEvent);
+      elements.input.dispatchEvent(changeEvent);
+
+      if (typeof window.ProductForm !== 'undefined') {
+        const customEvent = new CustomEvent('quantityChanged', {
+          detail: { quantity: quantity }
+        });
+        elements.input.dispatchEvent(customEvent);
+      }
+
+      console.log(`Updated theme quantity to: ${quantity}`);
+    };
+
+    const getSelectedOfferQuantity = () => {
+      if (!currentVolumeData?.settings?.offerSettings?.offers) return 1;
+      
+      const selectedOffer = currentVolumeData.settings.offerSettings.offers[selectedOfferIndex];
+      return parseInt(selectedOffer?.quantity) || 1;
+    };
+
+    const setupAddToCartIntegration = () => {
+      const elements = findQuantityElements();
+      
+      if (!elements.form) {
+        console.warn('Product form not found for add to cart integration');
+        return;
+      }
+
+      const addToCartBtn = elements.form.querySelector('[name="add"], .btn.product-form__cart-submit, button[type="submit"]');
+      
+      if (!addToCartBtn) {
+        console.warn('Add to cart button not found');
+        return;
+      }
+
+      elements.form.addEventListener('submit', function(event) {
+        const selectedQuantity = getSelectedOfferQuantity();
+        updateThemeQuantity(selectedQuantity);
+        
+        console.log(`Adding to cart with volume discount quantity: ${selectedQuantity}`);
+      });
+
+      addToCartBtn.addEventListener('click', function(event) {
+        const selectedQuantity = getSelectedOfferQuantity();
+        updateThemeQuantity(selectedQuantity);
+      });
+    };
+
+    const handleThemeQuantityChange = () => {
+      const elements = findQuantityElements();
+      
+      if (!elements.input) return;
+
+      elements.input.addEventListener('input', function(event) {
+        if (!event.isTrusted) return;
+        
+        const currentQuantity = parseInt(event.target.value) || 1;
+        
+        if (currentVolumeData?.settings?.offerSettings?.offers) {
+          const matchingOfferIndex = currentVolumeData.settings.offerSettings.offers.findIndex(
+            offer => parseInt(offer.quantity) === currentQuantity
+          );
+          
+          if (matchingOfferIndex >= 0 && matchingOfferIndex !== selectedOfferIndex) {
+            selectOffer(matchingOfferIndex);
+          }
+        }
+      });
+
+      if (elements.increaseBtn) {
+        elements.increaseBtn.addEventListener('click', function() {
+          setTimeout(() => {
+            const newQuantity = parseInt(elements.input.value) || 1;
+            checkOfferMatch(newQuantity);
+          }, 100);
+        });
+      }
+
+      if (elements.decreaseBtn) {
+        elements.decreaseBtn.addEventListener('click', function() {
+          setTimeout(() => {
+            const newQuantity = parseInt(elements.input.value) || 1;
+            checkOfferMatch(newQuantity);
+          }, 100);
+        });
+      }
+    };
+
+    const checkOfferMatch = (quantity) => {
+      if (!currentVolumeData?.settings?.offerSettings?.offers) return;
+      
+      const matchingOfferIndex = currentVolumeData.settings.offerSettings.offers.findIndex(
+        offer => parseInt(offer.quantity) === quantity
+      );
+      
+      if (matchingOfferIndex >= 0 && matchingOfferIndex !== selectedOfferIndex) {
+        selectOffer(matchingOfferIndex);
+      }
+    };
+
+    // === OTHER HELPER FUNCTIONS ===
+    
     const rgbaToString = (color) => {
       if (
         !color ||
@@ -52,12 +271,11 @@
         typeof color.blue !== 'number' ||
         typeof color.alpha !== 'number'
       ) {
-        return 'rgba(0, 0, 0, 1)'; // Default to black if invalid
+        return 'rgba(0, 0, 0, 1)';
       }
       return `rgba(${color.red}, ${color.green}, ${color.blue}, ${color.alpha})`;
     };
 
-    // Helper to map font style string to CSS font-weight
     const getFontWeight = (fontStyle) => {
       switch (fontStyle) {
         case 'Lighter':
@@ -73,54 +291,34 @@
       }
     };
 
-    // Helper to format price
-    const formatPrice = (price) => {
-      if (typeof price === 'string' && price.includes('₹')) {
-        return price;
+    // === MAIN FUNCTIONS ===
+    
+    const selectOffer = (newSelectedIndex) => {
+      console.log('Selected offer index:', newSelectedIndex);
+      
+      if (newSelectedIndex === selectedOfferIndex) return;
+      
+      selectedOfferIndex = newSelectedIndex;
+      
+      const selectedOffer = currentVolumeData?.settings?.offerSettings?.offers?.[selectedOfferIndex];
+      const offerQuantity = parseInt(selectedOffer?.quantity) || 1;
+      
+      updateThemeQuantity(offerQuantity);
+      
+      if (currentVolumeData) {
+        renderVolumeDiscount(currentVolumeData);
       }
-      return `₹${parseFloat(price).toFixed(2)}`;
+
+      const customEvent = new CustomEvent('volumeDiscountOfferSelected', {
+        detail: {
+          offerIndex: newSelectedIndex,
+          offer: selectedOffer,
+          quantity: offerQuantity
+        }
+      });
+      document.dispatchEvent(customEvent);
     };
 
-    // Helper to calculate discounted price
-    const calculatePrice = (offer, basePrice) => {
-      if (!offer || !offer.priceAmount || offer.priceAmount === "") {
-        return basePrice;
-      }
-
-      const discountValue = parseFloat(offer.priceAmount);
-      
-      if (offer.priceValue === "discount_percentage") {
-        return basePrice - (basePrice * discountValue / 100);
-      } else if (offer.priceValue === "fixed_amount") {
-        return Math.max(0, basePrice - discountValue);
-      }
-      
-      return basePrice;
-    };
-
-    // Helper to generate pricing for offers
-    const generateOfferPricing = (offer) => {
-      const basePricePerItem = parseFloat(productData.price) || 100;
-      const quantity = parseInt(offer.quantity) || 1;
-      const totalBasePrice = basePricePerItem * quantity;
-      
-      if (offer.priceAmount && offer.priceAmount !== "") {
-        const discountedPrice = calculatePrice(offer, totalBasePrice);
-        return {
-          price: discountedPrice,
-          compareAtPrice: totalBasePrice > discountedPrice ? totalBasePrice : null,
-          pricePerItem: discountedPrice / quantity
-        };
-      }
-      
-      return { 
-        price: totalBasePrice, 
-        compareAtPrice: null,
-        pricePerItem: basePricePerItem
-      };
-    };
-
-    // Main fetch and render function
     const loadVolumeDiscount = () => {
       fetch(`${shopUrl}/apps/vol-api/volume-discount`)
         .then((response) => {
@@ -131,16 +329,16 @@
         })
         .then((data) => {
           console.log('Fetched volume discount data:', data);
+          console.log('Product price in cents:', productData.price);
+          console.log('Product price in rupees:', productData.priceInRupees);
 
-          // Check if we have valid data
           if (!data.success || !data.data || !Array.isArray(data.data) || data.data.length === 0) {
             console.warn('No volume discount data found.');
             return hideVolumeBlock();
           }
 
-          // Get published volumes
           const publishedVolumes = data.data.filter(volume => volume.status === 'published');
-          const volumeData = publishedVolumes.length > 0 ? publishedVolumes[0] : data.data[0];
+          const volumeData = publishedVolumes.length > 0 ? publishedVolumes[0] : data.data;
 
           if (!volumeData || !volumeData.settings) {
             console.warn('Volume discount settings not found.');
@@ -149,7 +347,15 @@
 
           currentVolumeData = volumeData;
           selectedOfferIndex = volumeData.settings.offerSettings?.selectedOfferIndex || 0;
+          
           renderVolumeDiscount(volumeData);
+          
+          setupAddToCartIntegration();
+          handleThemeQuantityChange();
+          
+          const initialOffer = volumeData.settings.offerSettings?.offers?.[selectedOfferIndex];
+          const initialQuantity = parseInt(initialOffer?.quantity) || 1;
+          updateThemeQuantity(initialQuantity);
         })
         .catch((error) => {
           console.error('Error fetching volume discount settings:', error);
@@ -157,19 +363,16 @@
         });
     };
 
-    // Function to hide the volume discount block
     const hideVolumeBlock = () => {
       const vdBlock = document.querySelector('.vd-volume-bundle');
       if (vdBlock) vdBlock.style.display = 'none';
     };
 
-    // Function to show the volume discount block
     const showVolumeBlock = () => {
       const vdBlock = document.querySelector('.vd-volume-bundle');
       if (vdBlock) vdBlock.style.display = 'block';
     };
 
-    // Main render function
     const renderVolumeDiscount = (volumeData) => {
       const settings = volumeData.settings;
       const { bundleSettings, offerSettings, designSettings, advancedSettings } = settings;
@@ -180,29 +383,18 @@
         return;
       }
 
-      // Clear existing content
       vdContainer.innerHTML = '';
 
-      // Check visibility settings
       if (bundleSettings?.visibilitySettings?.visibility === 'specific_products') {
-        // You would need to implement product-specific logic here
-        // For now, we'll show it on all products
+        // Product-specific logic would go here
       }
 
-      // 1. Render Header
       renderHeader(vdContainer, bundleSettings, designSettings);
-
-      // 2. Render Offers
       renderOffers(vdContainer, offerSettings, bundleSettings, designSettings, advancedSettings);
 
-      // 3. Render Add to Cart Button
-      renderAddToCartButton(vdContainer, offerSettings);
-
-      // Show the block
       showVolumeBlock();
     };
 
-    // Function to render header
     const renderHeader = (container, bundleSettings, designSettings) => {
       const headerDiv = document.createElement('div');
       headerDiv.style.cssText = `
@@ -253,7 +445,6 @@
       container.appendChild(headerDiv);
     };
 
-    // Function to render offers
     const renderOffers = (container, offerSettings, bundleSettings, designSettings, advancedSettings) => {
       if (!offerSettings?.offers || !Array.isArray(offerSettings.offers)) {
         console.warn('No offers found in volume discount settings.');
@@ -272,7 +463,6 @@
       container.appendChild(offersContainer);
     };
 
-    // Function to create individual offer item
     const createOfferItem = (offer, index, isSelected, bundleSettings, designSettings, advancedSettings) => {
       const offerItem = document.createElement('div');
       offerItem.className = 'offer-item';
@@ -296,14 +486,11 @@
         transition: all 0.2s ease;
       `;
 
-      // Add click handler for offer selection
       offerItem.addEventListener('click', () => selectOffer(index));
 
-      // Left content (checkmark + text)
       const leftContent = document.createElement('div');
       leftContent.style.cssText = 'display: flex; align-items: center;';
 
-      // Add checkmark if enabled
       const showRadioButtons = bundleSettings?.checkmarkSettings?.checkmarkVisibility === "show" || 
                              bundleSettings?.checkmarkSettings?.checkmarkVisibility === "showRadio";
       
@@ -312,17 +499,14 @@
         leftContent.appendChild(checkmark);
       }
 
-      // Add text content
       const textContent = createTextContent(offer, designSettings);
       leftContent.appendChild(textContent);
 
       offerItem.appendChild(leftContent);
 
-      // Right content (price)
       const rightContent = createPriceContent(offer, designSettings, advancedSettings);
       offerItem.appendChild(rightContent);
 
-      // Add highlight tag if applicable
       if (offer?.highlight && offer?.highlightSettings?.text) {
         const highlightTag = createHighlightTag(offer, designSettings, bundleSettings);
         offerItem.appendChild(highlightTag);
@@ -331,7 +515,6 @@
       return offerItem;
     };
 
-    // Function to create checkmark
     const createCheckmark = (isSelected, designSettings) => {
       const checkmarkDiv = document.createElement('div');
       checkmarkDiv.style.cssText = `
@@ -360,7 +543,6 @@
       return checkmarkDiv;
     };
 
-    // Function to create text content
     const createTextContent = (offer, designSettings) => {
       const textContent = document.createElement('div');
 
@@ -387,7 +569,7 @@
       return textContent;
     };
 
-    // Function to create price content
+    // FIXED: Price content creation with proper price handling
     const createPriceContent = (offer, designSettings, advancedSettings) => {
       const rightContent = document.createElement('div');
       rightContent.style.textAlign = 'right';
@@ -432,7 +614,6 @@
       return rightContent;
     };
 
-    // Function to create highlight tag
     const createHighlightTag = (offer, designSettings, bundleSettings) => {
       const highlightTag = document.createElement('div');
       const shape = offer?.highlightSettings?.shape || 'rounded';
@@ -463,52 +644,6 @@
       return highlightTag;
     };
 
-    // Function to render add to cart button
-    const renderAddToCartButton = (container, offerSettings) => {
-      const buttonDiv = document.createElement('button');
-      buttonDiv.style.cssText = `
-        margin-top: 16px;
-        background-color: #f0f0f0;
-        color: #999;
-        border: none;
-        padding: 14px;
-        border-radius: 6px;
-        cursor: not-allowed;
-        text-align: center;
-        font-size: 16px;
-        font-weight: 600;
-        width: 100%;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-      `;
-      buttonDiv.textContent = 'ADD TO CART';
-      
-      // Add click handler (you can implement actual cart functionality here)
-      buttonDiv.addEventListener('click', () => {
-        console.log('Add to cart clicked', {
-          selectedOfferIndex,
-          selectedOffer: offerSettings?.offers?.[selectedOfferIndex]
-        });
-        // Implement your cart logic here
-      });
-
-      container.appendChild(buttonDiv);
-    };
-
-    // Function to handle offer selection
-    const selectOffer = (newSelectedIndex) => {
-      console.log('Selected offer index:', newSelectedIndex);
-      
-      if (newSelectedIndex === selectedOfferIndex) return;
-      
-      selectedOfferIndex = newSelectedIndex;
-      
-      // Re-render the volume discount with new selection
-      if (currentVolumeData) {
-        renderVolumeDiscount(currentVolumeData);
-      }
-    };
-
     // Add CSS for animations and hover effects
     const style = document.createElement('style');
     style.textContent = `
@@ -533,3 +668,4 @@
     loadVolumeDiscount();
   });
 </script>
+
