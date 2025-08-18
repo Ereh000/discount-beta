@@ -1,3 +1,5 @@
+// app/routes/app.product-bundle.$id.jsx
+
 import {
   Grid,
   Page,
@@ -6,29 +8,55 @@ import {
   Button,
   Banner,
 } from "@shopify/polaris";
-import React, { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useFetcher, useLoaderData, useParams, json } from "@remix-run/react";
-import "./_index/style.css";
 import BundleSettingsCard from "../Components/Productbundle/BundleSettings";
 import BundleLivePreview from "../Components/Productbundle/BundleLivePreview";
 import prisma from "../db.server";
 import { fetchShop } from "../utils/getShop";
+import { useBundleState } from "../hooks/useBundleState";
+import { useProductManagement } from "../hooks/useProductManagement";
+import { VALIDATION_MESSAGES, BANNER_MESSAGES } from "../utils/productBundle/bundleConstants";
 
-// ========== Remix Loader Function -----------
+// ========== Remix Loader Function - UPDATED -----------
 export async function loader({ request, params }) {
   const { id } = params;
   const shop = await fetchShop(request);
 
-  // If id is "new", return empty data for creation
   if (id === "new") {
-    return json({ 
-      success: true, 
-      isEdit: false, 
-      data: null 
-    });
+    try {
+      // Check for existing bundles to validate position restrictions
+      const existingBundles = await prisma.bundle.findMany({
+        where: { shop: shop.id },
+        select: { id: true, position: true, name: true },
+      });
+
+      // Check if there's already a bundle with position "all"
+      const hasAllPositionBundle = existingBundles.some(bundle => 
+        bundle.position === 'all'
+      );
+
+      return json({ 
+        success: true, 
+        isEdit: false, 
+        data: null,
+        hasAllPositionBundle, // Flag to indicate if "all" position bundle exists
+        existingBundleNames: existingBundles
+          .filter((bundle) => bundle.name)
+          .map((bundle) => bundle.name.trim()),
+      });
+    } catch (error) {
+      console.error("Error fetching existing bundles:", error);
+      return json({ 
+        success: true, 
+        isEdit: false, 
+        data: null,
+        hasAllPositionBundle: false,
+        existingBundleNames: [],
+      });
+    }
   }
 
-  // If id exists, fetch the bundle data for editing
   try {
     const bundle = await prisma.bundle.findFirst({
       where: {
@@ -36,7 +64,7 @@ export async function loader({ request, params }) {
         shop: shop.id,
       },
       include: {
-        products: true, // Include related products
+        products: true,
       },
     });
 
@@ -44,10 +72,28 @@ export async function loader({ request, params }) {
       throw new Response("Bundle not found", { status: 404 });
     }
 
+    // Check for existing bundles excluding current one
+    const existingBundles = await prisma.bundle.findMany({
+      where: {
+        shop: shop.id,
+        id: { not: parseInt(id) }, // Exclude current bundle
+      },
+      select: { id: true, position: true, name: true },
+    });
+
+    // Check if there's already a bundle with position "all" (excluding current)
+    const hasAllPositionBundle = existingBundles.some(bundle => 
+      bundle.position === 'all'
+    );
+
     return json({ 
       success: true, 
       isEdit: true, 
-      data: bundle 
+      data: bundle,
+      hasAllPositionBundle, // Flag to indicate if "all" position bundle exists
+      existingBundleNames: existingBundles
+        .filter((bundle) => bundle.name)
+        .map((bundle) => bundle.name.trim()),
     });
   } catch (error) {
     console.error("Error loading bundle:", error);
@@ -56,299 +102,248 @@ export async function loader({ request, params }) {
 }
 
 export default function EditProductBundle() {
-  const { success, isEdit, data } = useLoaderData();
+  const { isEdit, data, hasAllPositionBundle = false, existingBundleNames = [] } = useLoaderData();
   const params = useParams();
   const { id } = params;
+  const fetcher = useFetcher();
 
-  // Helper function to initialize state from loaded data
-  const initializeState = (defaultValue, settingsPath = null, directPath = null) => {
-    if (isEdit && data) {
-      if (directPath) {
-        return data[directPath] !== undefined ? data[directPath] : defaultValue;
-      }
-      if (settingsPath && data.settings) {
-        const keys = settingsPath.split('.');
-        let value = data.settings;
-        for (const key of keys) {
-          value = value?.[key];
-        }
-        return value !== undefined ? value : defaultValue;
-      }
+  // Use custom hooks for state management
+  const {
+    basicSettings,
+    setBasicSettings,
+    pricingSettings,
+    setPricingSettings,
+    highlightSettings,
+    setHighlightSettings,
+    designSettings,
+    setDesignSettings,
+    generalSettings,
+    setGeneralSettings,
+    products,
+    setProducts
+  } = useBundleState(isEdit, data);
+
+  const {
+    handleAddProduct,
+    handleRemoveProduct,
+    handleProductNameChange,
+    handleProductQuantityChange
+  } = useProductManagement(products, setProducts);
+
+  // Store original position for edit mode validation
+  const [originalPosition, setOriginalPosition] = useState(() => {
+    if (isEdit && data?.position) {
+      return data.position;
     }
-    return defaultValue;
-  };
-
-  // Initialize all state variables
-  const [bundleName, setBundleName] = useState(initializeState("Bundle 1", null, "name"));
-  const [headerText, setHeaderText] = useState(initializeState("Frequently bought together", "header"));
-  const [alignment, setAlignment] = useState(initializeState("left", "alignment"));
-  const [footerText, setFooterText] = useState(initializeState("Total :", "footer"));
-  const [buttonText, setButtonText] = useState(initializeState("Claim Offer", "button"));
-  const [position, setPosition] = useState(initializeState("all", "position"));
-  const [publishOption, setPublishOption] = useState(initializeState("immediately", "publishOption"));
-  const [selectedTemplate, setSelectedTemplate] = useState(initializeState("royal", "template"));
-  const [selectedColor, setSelectedColor] = useState(initializeState("purple", "color"));
-
-  // Pricing options
-  const [pricingOption, setPricingOption] = useState(initializeState("default", "pricing.option"));
-  const [discountPercentage, setDiscountPercentage] = useState(initializeState("10", "pricing.discountPercentage"));
-  const [fixedDiscount, setFixedDiscount] = useState(initializeState("25", "pricing.fixedDiscount"));
-  const [fixedPrice, setFixedPrice] = useState(initializeState("99", "pricing.fixedPrice"));
-
-  // Highlight options
-  const [highlightOption, setHighlightOption] = useState(initializeState("text", "highlight.option"));
-  const [highlightTitle, setHighlightTitle] = useState(initializeState("Unlock Your Discount", "highlight.title"));
-  const [highlightTimerTitle, setHighlightTimerTitle] = useState(initializeState("Offer ends in", "highlight.timerTitle"));
-  const [isBlinking, setIsBlinking] = useState(initializeState(false, "highlight.isBlinking"));
-  const [highlightStyle, setHighlightStyle] = useState(initializeState("solid", "highlight.style"));
-  const [timerEndDate, setTimerEndDate] = useState(initializeState("", "highlight.timerEndDate"));
-  const [timerFormat, setTimerFormat] = useState(initializeState("dd:hh:mm:ss", "highlight.timerFormat"));
-
-  // Products in bundle - Initialize from loaded data or defaults
-  const [products, setProducts] = useState(() => {
-    if (isEdit && data?.products && data.products.length > 0) {
-      return data.products.map((product, index) => ({
-        id: index + 1,
-        name: product.name || "",
-        quantity: product.quantity || 1,
-        productId: product.productId || null,
-        image: product.image || null,
-        productHandle: product.productHandle || null,
-      }));
-    }
-    return [
-      {
-        id: 1,
-        name: "",
-        quantity: 1,
-        productId: null,
-        image: null,
-        productHandle: null,
-      },
-      {
-        id: 2,
-        name: "",
-        quantity: 1,
-        productId: null,
-        image: null,
-        productHandle: null,
-      },
-      {
-        id: 3,
-        name: "",
-        quantity: 1,
-        productId: null,
-        image: null,
-        productHandle: null,
-      },
-    ];
+    return 'specific'; // Default position
   });
 
-  // Typography settings
-  const [typography, setTypography] = useState(
-    initializeState({
-      header: { size: "18", weight: "Bold" },
-      titlePrice: { size: "16", weight: "Bold" },
-      quantityPrice: { size: "13", fontStyle: "Regular" },
-      highlight: { size: "10.5", fontStyle: "Bold" },
-    }, "typography")
-  );
+  // Banner state - Enhanced
+  const [showBanner, setShowBanner] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [bannerTone, setBannerTone] = useState("critical");
 
-  // Spacing settings
-  const [spacing, setSpacing] = useState(
-    initializeState({
-      bundleTop: "10",
-      bundleBottom: "6",
-      footerTop: "20",
-      footerBottom: "10",
-    }, "spacing")
-  );
-
-  // Shape settings
-  const [shapes, setShapes] = useState(
-    initializeState({
-      bundle: "Rounded",
-      footer: "Rounded",
-      addToCart: "Rounded",
-    }, "shapes")
-  );
-
-  const [productImageSize, setProductImageSize] = useState(initializeState("56", "productImageSize"));
-  const [iconStyle, setIconStyle] = useState(initializeState("Plus 5", "iconStyle"));
-
-  // Border thickness
-  const [borderThickness, setBorderThickness] = useState(
-    initializeState({
-      bundle: "1",
-      footer: "0",
-      addToCart: "2",
-    }, "borderThickness")
-  );
-
-  // Color settings
-  const [colors, setColors] = useState(
-    initializeState({
-      background: "",
-      border: "#E1E3E5",
-      footerBackground: "#F6F6F7",
-      buttonBackground: "",
-      buttonBorder: "",
-      highlightBackground: "",
-      quantityBackground: "",
-      price: "#000000",
-      comparedPrice: "#FF0000",
-      headerText: "#000000",
-      titleText: "#000000",
-      highlightText: "#FFFFFF",
-      addToCartText: "#FFFFFF",
-      quantityText: "#000000",
-      footerText: "",
-    }, "colors")
-  );
-
-  // General settings
-  const [settings, setSettings] = useState(
-    initializeState({
-      variantChoice: true,
-      showPrices: true,
-      showComparePrice: true,
-      skipCart: false,
-      redirectToProduct: true,
-      redirectToNewTab: true,
-    }, "general")
-  );
-
-  // Handler to add a new product to the bundle
-  const handleAddProduct = useCallback(() => {
-    setProducts((prev) => [
-      ...prev,
-      {
-        id: prev.length > 0 ? Math.max(...prev.map((p) => p.id)) + 1 : 1,
-        name: "",
-        quantity: 1,
-        productId: null,
-        image: null,
-        handle: null,
-      },
-    ]);
-  }, []);
-
-  // Handler to remove a product from the bundle
-  const handleRemoveProduct = useCallback((productId) => {
-    setProducts((prev) => prev.filter((product) => product.id !== productId));
-  }, []);
-
-  // Handler for settings changes
+  // Settings handler
   const handleSettingChange = useCallback((setting) => {
-    setSettings((prev) => ({
+    setGeneralSettings((prev) => ({
       ...prev,
       [setting]: !prev[setting],
     }));
+  }, [setGeneralSettings]);
+
+  // Enhanced: Position validation function
+  const validatePositionSettings = useCallback(
+    (currentPosition, hasAllPositionBundle, isEdit, originalPosition) => {
+      // If trying to set position to "all"
+      if (currentPosition === "all") {
+        // If creating a new bundle and there's already an "all" position bundle
+        if (!isEdit && hasAllPositionBundle) {
+          return {
+            isValid: false,
+            message: VALIDATION_MESSAGES.ALL_POSITION_BUNDLE_EXISTS,
+          };
+        }
+        
+        // If editing and changing FROM another position TO "all"
+        // and there's already an "all" position bundle
+        if (isEdit && originalPosition !== "all" && hasAllPositionBundle) {
+          return {
+            isValid: false,
+            message: VALIDATION_MESSAGES.ALL_POSITION_BUNDLE_EXISTS,
+          };
+        }
+      }
+      
+      return { isValid: true };
+    },
+    [],
+  );
+
+  // Enhanced: Show error helper function
+  const showErrorBanner = useCallback((message) => {
+    setErrorMessage(message);
+    setBannerTone("critical");
+    setShowBanner(true);
+    
+    // Auto-hide banner after 10 seconds for validation errors
+    setTimeout(() => {
+      setShowBanner(false);
+      setErrorMessage("");
+    }, 10000);
   }, []);
 
-  // Handler for product name changes
-  const handleProductNameChange = useCallback(
-    (index, value) => {
-      const updatedProducts = [...products];
-      updatedProducts[index].name = value;
-      setProducts(updatedProducts);
-    },
-    [products],
-  );
+  // Enhanced: Show success helper function
+  const showSuccessBanner = useCallback((message) => {
+    setErrorMessage(message);
+    setBannerTone("success");
+    setShowBanner(true);
+    
+    // Auto-hide banner after 5 seconds for success messages
+    setTimeout(() => {
+      setShowBanner(false);
+      setErrorMessage("");
+    }, 5000);
+  }, []);
 
-  // Handler for product quantity changes
-  const handleProductQuantityChange = useCallback(
-    (index, value) => {
-      const updatedProducts = [...products];
-      updatedProducts[index].quantity = parseInt(value) || 1;
-      setProducts(updatedProducts);
-    },
-    [products],
-  );
+  // Enhanced: Save handler with Banner error messages
+  const handleSave = useCallback(async (status) => {
+    // Clear any existing banner first
+    setShowBanner(false);
+    setErrorMessage("");
 
-  // Save handler using separate API route
-  const fetcher = useFetcher();
-  const handleSave = async (status) => {
-    // Check if any products have been selected
+    console.log("Validating bundle save for status:", status);
+
+    // Validate: Check if products are selected
     const hasSelectedProducts = products.some(
-      (product) => product.name && product.name.trim() !== "",
+      (product) => product.name && product.name.trim() !== ""
     );
 
     if (!hasSelectedProducts) {
-      setShowBanner(true);
-      setErrorMessage("Please select at least one product for your bundle before saving.");
+      showErrorBanner(VALIDATION_MESSAGES.NO_PRODUCTS_SELECTED);
       return;
     }
 
+    // Validate: Check bundle name is not empty
+    if (!basicSettings.bundleName || basicSettings.bundleName.trim() === "") {
+      showErrorBanner("Bundle name cannot be empty. Please provide a name for your bundle.");
+      return;
+    }
+
+    // Validate: Position settings - Show error in Banner
+    const positionValidation = validatePositionSettings(
+      basicSettings.position,
+      hasAllPositionBundle,
+      isEdit,
+      originalPosition
+    );
+    
+    if (!positionValidation.isValid) {
+      showErrorBanner(positionValidation.message);
+      return;
+    }
+
+    // Validate: Check for duplicate bundle names
+    if (existingBundleNames.includes(basicSettings.bundleName?.trim())) {
+      showErrorBanner(VALIDATION_MESSAGES.DUPLICATE_BUNDLE_NAME);
+      return;
+    }
+
+    // All validations passed, prepare data for submission
     const bundleData = {
-      status, // 'draft' or 'published'
-      bundleName,
-      headerText,
-      alignment,
-      footerText,
-      buttonText,
-      position,
-      publishOption,
-      selectedTemplate,
-      selectedColor,
-      settings,
-      pricingOption,
-      discountPercentage,
-      fixedDiscount,
-      fixedPrice,
-      highlightOption,
-      highlightTitle,
-      highlightTimerTitle,
-      isBlinking,
-      highlightStyle,
-      timerEndDate,
-      timerFormat,
+      status,
+      bundleName: basicSettings.bundleName,
+      headerText: basicSettings.headerText,
+      alignment: basicSettings.alignment,
+      footerText: basicSettings.footerText,
+      buttonText: basicSettings.buttonText,
+      position: basicSettings.position,
+      selectedColor: basicSettings.selectedColor,
+      productImageSize: basicSettings.productImageSize,
+      iconStyle: basicSettings.iconStyle,
+      pricingOption: pricingSettings.option,
+      discountPercentage: pricingSettings.discountPercentage,
+      fixedDiscount: pricingSettings.fixedDiscount,
+      fixedPrice: pricingSettings.fixedPrice,
+      highlightOption: highlightSettings.option,
+      highlightTitle: highlightSettings.title,
+      highlightTimerTitle: highlightSettings.timerTitle,
+      isBlinking: highlightSettings.isBlinking,
+      highlightStyle: highlightSettings.style,
+      timerEndDate: highlightSettings.timerEndDate,
+      timerFormat: highlightSettings.timerFormat,
+      typography: designSettings.typography,
+      spacing: designSettings.spacing,
+      shapes: designSettings.shapes,
+      borderThickness: designSettings.borderThickness,
+      colors: designSettings.colors,
+      settings: generalSettings,
       products,
-      typography,
-      spacing,
-      shapes,
-      productImageSize,
-      iconStyle,
-      borderThickness,
-      colors,
-      bundleId: id, // Pass the ID to determine create vs update
-      isEdit: isEdit, // Pass edit flag
+      bundleId: id,
+      isEdit: isEdit,
     };
 
-    fetcher.submit(
-      { bundleData: JSON.stringify(bundleData) },
-      { method: "post", action: "/api/product-bundle-create" },
-    );
-  };
+    console.log("Submitting bundle data:", bundleData);
 
-  // State for banner
-  const [showBanner, setShowBanner] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+    try {
+      const formData = new FormData();
+      formData.append("bundleData", JSON.stringify(bundleData));
 
+      fetcher.submit(formData, { 
+        method: "post", 
+        action: "/api/product-bundle-create" 
+      });
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      showErrorBanner("Error submitting form: " + error.message);
+    }
+  }, [
+    products, 
+    basicSettings, 
+    pricingSettings, 
+    highlightSettings, 
+    designSettings, 
+    generalSettings, 
+    id, 
+    isEdit, 
+    fetcher,
+    validatePositionSettings,
+    hasAllPositionBundle,
+    originalPosition,
+    existingBundleNames,
+    showErrorBanner
+  ]);
+
+  // Enhanced: Handle fetcher response
   useEffect(() => {
     if (fetcher.data) {
-      setShowBanner(true);
+      if (fetcher.data.success) {
+        showSuccessBanner(fetcher.data.message);
+      } else {
+        showErrorBanner(fetcher.data.error || fetcher.data.message || "An error occurred");
+      }
     }
-  }, [fetcher.data]);
+  }, [fetcher.data, showSuccessBanner, showErrorBanner]);
 
-  const pageTitle = isEdit ? `Edit ${bundleName}` : "Create Product Bundle";
+  const pageTitle = isEdit ? `Edit ${basicSettings.bundleName}` : "Create Product Bundle";
+  const isSubmitting = fetcher.state === "submitting";
 
   return (
     <Page 
       title={pageTitle} 
       backAction={{ content: "Bundles", url: "/app" }}
     >
-      {showBanner && (fetcher.data || errorMessage) && (
+      {/* Enhanced Banner - Shows all validation and API errors */}
+      {showBanner && (
         <div className="">
           <Banner
-            title={fetcher.data?.success ? "Success!" : "Something went wrong"}
+            title={bannerTone === "success" ? BANNER_MESSAGES.SUCCESS : BANNER_MESSAGES.ERROR}
             onDismiss={() => {
               setShowBanner(false);
               setErrorMessage("");
             }}
-            tone={fetcher.data?.success ? "success" : "critical"}
+            tone={bannerTone}
           >
-            <p>{fetcher.data?.message || fetcher.data?.error || errorMessage}</p>
+            <p>{errorMessage}</p>
           </Banner>
           <br />
         </div>
@@ -357,111 +352,119 @@ export default function EditProductBundle() {
       <Grid>
         <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 6, xl: 6 }}>
           <BundleSettingsCard
-            bundleName={bundleName}
-            setBundleName={setBundleName}
-            headerText={headerText}
-            setHeaderText={setHeaderText}
-            alignment={alignment}
-            setAlignment={setAlignment}
-            footerText={footerText}
-            setFooterText={setFooterText}
-            buttonText={buttonText}
-            setButtonText={setButtonText}
-            position={position}
-            setPosition={setPosition}
-            publishOption={publishOption}
-            setPublishOption={setPublishOption}
-            selectedTemplate={selectedTemplate}
-            setSelectedTemplate={setSelectedTemplate}
-            selectedColor={selectedColor}
-            setSelectedColor={setSelectedColor}
-            settings={settings}
-            handleSettingChange={handleSettingChange}
-            pricingOption={pricingOption}
-            setPricingOption={setPricingOption}
-            discountPercentage={discountPercentage}
-            setDiscountPercentage={setDiscountPercentage}
-            fixedDiscount={fixedDiscount}
-            setFixedDiscount={setFixedDiscount}
-            fixedPrice={fixedPrice}
-            setFixedPrice={setFixedPrice}
-            highlightOption={highlightOption}
-            setHighlightOption={setHighlightOption}
-            highlightTitle={highlightTitle}
-            setHighlightTitle={setHighlightTitle}
-            highlightTimerTitle={highlightTimerTitle}
-            setHighlightTimerTitle={setHighlightTimerTitle}
-            isBlinking={isBlinking}
-            setIsBlinking={setIsBlinking}
-            highlightStyle={highlightStyle}
-            setHighlightStyle={setHighlightStyle}
-            timerEndDate={timerEndDate}
-            setTimerEndDate={setTimerEndDate}
-            timerFormat={timerFormat}
-            setTimerFormat={setTimerFormat}
+            bundleName={basicSettings.bundleName}
+            setBundleName={(value) => setBasicSettings(prev => ({...prev, bundleName: value}))}
+            headerText={basicSettings.headerText}
+            setHeaderText={(value) => setBasicSettings(prev => ({...prev, headerText: value}))}
+            alignment={basicSettings.alignment}
+            setAlignment={(value) => setBasicSettings(prev => ({...prev, alignment: value}))}
+            footerText={basicSettings.footerText}
+            setFooterText={(value) => setBasicSettings(prev => ({...prev, footerText: value}))}
+            buttonText={basicSettings.buttonText}
+            setButtonText={(value) => setBasicSettings(prev => ({...prev, buttonText: value}))}
+            position={basicSettings.position}
+            setPosition={(value) => setBasicSettings(prev => ({...prev, position: value}))}
+            selectedColor={basicSettings.selectedColor}
+            setSelectedColor={(value) => setBasicSettings(prev => ({...prev, selectedColor: value}))}
+            settings={generalSettings}
+            handleSettingChange={handleSettingChange} 
+            pricingOption={pricingSettings.option}
+            setPricingOption={(value) => setPricingSettings(prev => ({...prev, option: value}))}
+            discountPercentage={pricingSettings.discountPercentage}
+            setDiscountPercentage={(value) => setPricingSettings(prev => ({...prev, discountPercentage: value}))}
+            fixedDiscount={pricingSettings.fixedDiscount}
+            setFixedDiscount={(value) => setPricingSettings(prev => ({...prev, fixedDiscount: value}))}
+            fixedPrice={pricingSettings.fixedPrice}
+            setFixedPrice={(value) => setPricingSettings(prev => ({...prev, fixedPrice: value}))}
+            highlightOption={highlightSettings.option}
+            setHighlightOption={(value) => setHighlightSettings(prev => ({...prev, option: value}))}
+            highlightTitle={highlightSettings.title}
+            setHighlightTitle={(value) => setHighlightSettings(prev => ({...prev, title: value}))}
+            highlightTimerTitle={highlightSettings.timerTitle}
+            setHighlightTimerTitle={(value) => setHighlightSettings(prev => ({...prev, timerTitle: value}))}
+            isBlinking={highlightSettings.isBlinking}
+            setIsBlinking={(value) => setHighlightSettings(prev => ({...prev, isBlinking: value}))}
+            highlightStyle={highlightSettings.style}
+            setHighlightStyle={(value) => setHighlightSettings(prev => ({...prev, style: value}))}
+            timerEndDate={highlightSettings.timerEndDate}
+            setTimerEndDate={(value) => setHighlightSettings(prev => ({...prev, timerEndDate: value}))}
+            timerFormat={highlightSettings.timerFormat}
+            setTimerFormat={(value) => setHighlightSettings(prev => ({...prev, timerFormat: value}))}
             products={products}
             handleAddProduct={handleAddProduct}
             handleRemoveProduct={handleRemoveProduct}
             handleProductNameChange={handleProductNameChange}
             handleProductQuantityChange={handleProductQuantityChange}
             setProducts={setProducts}
-            typography={typography}
-            setTypography={setTypography}
-            spacing={spacing}
-            setSpacing={setSpacing}
-            shapes={shapes}
-            setShapes={setShapes}
-            productImageSize={productImageSize}
-            setProductImageSize={setProductImageSize}
-            iconStyle={iconStyle}
-            setIconStyle={setIconStyle}
-            borderThickness={borderThickness}
-            setBorderThickness={setBorderThickness}
-            colors={colors}
-            setColors={setColors}
+            typography={designSettings.typography}
+            setTypography={(value) => setDesignSettings(prev => ({...prev, typography: value}))}
+            spacing={designSettings.spacing}
+            setSpacing={(value) => setDesignSettings(prev => ({...prev, spacing: value}))}
+            shapes={designSettings.shapes}
+            setShapes={(value) => setDesignSettings(prev => ({...prev, shapes: value}))}
+            productImageSize={basicSettings.productImageSize}
+            setProductImageSize={(value) => setBasicSettings(prev => ({...prev, productImageSize: value}))}
+            iconStyle={basicSettings.iconStyle}
+            setIconStyle={(value) => setBasicSettings(prev => ({...prev, iconStyle: value}))}
+            borderThickness={designSettings.borderThickness}
+            setBorderThickness={(value) => setDesignSettings(prev => ({...prev, borderThickness: value}))}
+            colors={designSettings.colors}
+            setColors={(value) => setDesignSettings(prev => ({...prev, colors: value}))}
+            // Pass validation props (no longer needed for disabling, but can be used for other UI hints)
+            hasAllPositionBundle={hasAllPositionBundle}
+            isEdit={isEdit}
+            originalPosition={originalPosition}
           />
         </Grid.Cell>
         <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 6, xl: 6 }}>
           <BundleLivePreview
-            headerText={headerText}
-            alignment={alignment}
-            footerText={footerText}
-            buttonText={buttonText}
-            selectedTemplate={selectedTemplate}
-            selectedColor={selectedColor}
-            settings={settings}
+            headerText={basicSettings.headerText}
+            alignment={basicSettings.alignment}
+            footerText={basicSettings.footerText}
+            buttonText={basicSettings.buttonText}
+            selectedColor={basicSettings.selectedColor}
+            settings={generalSettings}  
             products={products}
-            highlightOption={highlightOption}
-            highlightTitle={highlightTitle}
-            highlightTimerTitle={highlightTimerTitle}
-            timerEndDate={timerEndDate}
-            timerFormat={timerFormat}
-            highlightStyle={highlightStyle}
-            isBlinking={isBlinking}
-            typography={typography}
-            spacing={spacing}
-            shapes={shapes}
-            productImageSize={productImageSize}
-            iconStyle={iconStyle}
-            borderThickness={borderThickness}
-            colors={colors}
+            highlightOption={highlightSettings.option}
+            highlightTitle={highlightSettings.title}
+            highlightTimerTitle={highlightSettings.timerTitle}
+            timerEndDate={highlightSettings.timerEndDate}
+            timerFormat={highlightSettings.timerFormat}
+            highlightStyle={highlightSettings.style}
+            isBlinking={highlightSettings.isBlinking}
+            typography={designSettings.typography}
+            spacing={designSettings.spacing}
+            shapes={designSettings.shapes}
+            productImageSize={basicSettings.productImageSize}
+            iconStyle={basicSettings.iconStyle}
+            borderThickness={designSettings.borderThickness}
+            colors={designSettings.colors}
           />
           <br />
           <InlineStack align="end">
             <ButtonGroup>
               <Button
+                type="button"
                 onClick={() => handleSave("draft")}
-                loading={fetcher.state === "submitting"}
+                loading={isSubmitting}
+                disabled={isSubmitting}
               >
                 Save as draft
               </Button>
-              <Button variant="primary" tone="critical">
+              <Button 
+                variant="primary" 
+                tone="critical"
+                type="button"
+                disabled={isSubmitting}
+              >
                 Delete
               </Button>
               <Button
                 variant="primary"
+                type="button"
                 onClick={() => handleSave("published")}
-                loading={fetcher.state === "submitting"}
+                loading={isSubmitting}
+                disabled={isSubmitting}
               >
                 {isEdit ? "Update" : "Publish"}
               </Button>

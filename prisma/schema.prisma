@@ -38,6 +38,7 @@ model Bundle {
   shop      String?
   status    String?   @default("draft") // draft, published, archived
   name      String?
+  position  String?   // Position where bundle appears (e.g., "all", "specific")
   settings  Json?
   products  BundleProduct[]
 }

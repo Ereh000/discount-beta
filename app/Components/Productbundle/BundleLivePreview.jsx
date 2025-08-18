@@ -1,405 +1,275 @@
+// Components/Productbundle/BundleLivePreview.jsx
+import { useEffect } from "react";
 import { Card } from "@shopify/polaris";
 
-export default function BundleLivePreview({
-  headerText,
-  alignment,
-  footerText,
-  buttonText,
-  selectedTemplate,
-  selectedColor,
-  settings,
-  products,
-  highlightOption,
-  highlightTitle,
-  highlightTimerTitle,
-  timerEndDate,
-  timerFormat,
-  highlightStyle,
-  isBlinking,
-  typography,
-  spacing,
-  shapes,
-  productImageSize,
-  iconStyle,
-  borderThickness,
-  colors,
-}) {
-  // Helper function to get border radius based on shape type
-  const getBorderRadius = (shapeType) => {
-    switch (shapeType) {
-      case "Rounded":
-        return "10px";
-      case "Pill":
-        return "50px";
-      case "Squared":
-        return "0px";
-      default:
-        return "8px";
+/* ------------------------------------------------------------------ */
+/*  UTILITIES                                                         */
+/* ------------------------------------------------------------------ */
+const colorHexMap = {
+  black:  "#000000",
+  purple: "#6F42C1",
+  blue:   "#4285F4",
+  teal:   "#20B2AA",
+  green:  "#4CAF50",
+  pink:   "#FF69B4",
+  red:    "#FF0000",
+  orange: "#FFA500",
+  yellow: "#FFFF00",
+  mint:   "#98FB98",
+};
+
+const radius = (shape) =>
+  shape === "Rounded"  ? "10px" :
+  shape === "Pill"     ? "50px" :
+  shape === "Squared"  ?  "0px" :  "8px";
+
+const fw = (w) =>
+  w === "Bold"   || w === "bold"   ? "bold" :
+  w === "Lighter"               ? "300"  : "normal";
+
+/* ------------------------------------------------------------------ */
+/*  COMPONENT                                                         */
+/* ------------------------------------------------------------------ */
+export default function BundleLivePreview(props) {
+
+  
+  /* -------------------------------------------------------------- */
+  /*  Destructure with sane fallbacks                               */
+  /* -------------------------------------------------------------- */
+  const {
+    headerText               = "",
+    alignment                = "left",
+    footerText               = "",
+    buttonText               = "Add to cart",
+    selectedTemplate,
+    selectedColor            = "purple",
+    settings                 = {},
+    products                 = [],
+    highlightOption          = "none",
+    highlightTitle           = "",
+    highlightTimerTitle      = "",
+    timerFormat              = "hh:mm:ss",
+    highlightStyle           = "solid",
+    isBlinking               = false,
+    typography               = {},
+    spacing                  = {},
+    shapes                   = {},
+    productImageSize         = 56,
+    borderThickness          = {},
+    colors                   = {},
+  } = props;
+
+  const themeColor = colorHexMap[selectedColor] || "#FF6B6B";
+
+
+
+  /* -------------------------------------------------------------- */
+  /*  Inject blink key-frame only in the browser                    */
+  /* -------------------------------------------------------------- */
+  useEffect(() => {
+    if (typeof document === "undefined") return;        // SSR guard
+    const id = "bundle-preview-blink";
+    if (!document.getElementById(id)) {
+      const style = document.createElement("style");
+      style.id = id;
+      style.textContent = `
+        @keyframes blink {
+          0%,50%,100% { opacity: 1 }
+          25%,75%    { opacity: 0 }
+        }`;
+      document.head.appendChild(style);
     }
-  };
+  }, []);
 
-  // Get the color for the preview based on the selected color
-  const getColorValue = (color) => {
-    const colorMap = {
-      black: "#000000",
-      purple: "#6F42C1",
-      blue: "#4285F4",
-      teal: "#20B2AA",
-      green: "#4CAF50",
-      pink: "#FF69B4",
-      red: "#FF0000",
-      orange: "#FFA500",
-      yellow: "#FFFF00",
-      mint: "#98FB98",
-    };
-    return colorMap[color] || "#FF6B6B";
-  };
-
-  const themeColor = getColorValue(selectedColor);
-  // console.log("themeColor: ", themeColor);
-  // console.log("colors", colors);
-
-  // Calculate dynamic styles based on props
-  const bundleStyles = {
+  /* -------------------------------------------------------------- */
+  /*  Computed styles                                               */
+  /* -------------------------------------------------------------- */
+  const css = {
     container: {
-      // backgroundColor: colors.background || "#FFFFFF",
-      marginTop: `${spacing.bundleTop}px`,
-      marginBottom: `${spacing.bundleBottom}px`,
+      marginTop:    `${spacing.bundleTop    || 10}px`,
+      marginBottom: `${spacing.bundleBottom ||  6}px`,
     },
     header: {
-      fontSize: `${typography.header.size}px`,
-      fontWeight:
-        typography.header.weight === "Bold"
-          ? "bold"
-          : typography.header.weight === "Lighter"
-            ? "300"
-            : "normal",
-      color: colors.headerText || "#000000",
-      marginBottom: "20px",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
+      display:   "flex",
+      alignItems:"center",
+      justifyContent:"space-between",
+      fontSize:  `${typography.header?.size || 18}px`,
+      fontWeight:fw(typography.header?.weight),
+      color:     colors.headerText || "#000",
+      marginBottom:"20px",
     },
-    headerTitle: {
-      textAlign: alignment,
-      flex: 1,
+    headerTitle: { textAlign: alignment, flex: 1 },
+    bodyWrap: {
+      display:"flex",
+      flexDirection:"column",
+      alignItems:
+        alignment === "center" ? "center" :
+        alignment === "right"  ? "flex-end" : "flex-start",
+      gap:"10px",
+      flexWrap:"wrap",
     },
-    productContainer: {
-      display: "flex",
-      alignItems: "center",
-      justifyContent:
-        alignment === "center"
-          ? "center"
-          : alignment === "right"
-            ? "flex-end"
-            : "flex-start",
-      gap: "10px",
-      flexWrap: "wrap",
-      flexDirection: "column",
-    },
-    productItem: {
-      display: "flex",
-      flexDirection: "row",
-      alignItems: "center",
-      gap: "12px",
-      width: "100%",
-      // backgroundColor: colors.background || "#FFFFFF",
+    product: {
+      display:"flex",
+      gap:"12px",
+      width:"100%",
+      padding:"10px 14px",
       background: colors.background
-        ? `${colors.background}10`
-        : `${themeColor}10`,
-      padding: "10px 14px",
-      border: `${borderThickness.bundle}px solid ${colors.border || "#E1E3E5"}`,
-      borderRadius: getBorderRadius(shapes.bundle),
-      // borderRadius: "5px",
-      // width: `${parseInt(productImageSize) + 30}px`,
+        ? `${colors.background}10` : `${themeColor}10`,
+      border: `${borderThickness.bundle || 1}px solid ${
+                colors.border || "#E1E3E5"}`,
+      borderRadius: radius(shapes.bundle),
     },
-    productImage: {
-      width: `${productImageSize}px`,
-      // height: `${productImageSize}px`,
-      height: "auto",
-      objectFit: "cover",
-      borderRadius: "5px",
-      overflow: "hidden",
-      // border: "1px solid #E1E3E5",
+    img: {
+      width:`${productImageSize}px`,
+      height:"auto",
+      objectFit:"cover",
+      borderRadius:"5px",
     },
-    productTitle: {
-      fontSize: `${typography.titlePrice.size}px`,
-      fontWeight: typography.titlePrice.weight === "Bold" ? "bold" : "normal",
-      color: colors.titleText || "#000000",
-      textAlign: "left",
-      // marginTop: "8px",
+    title: {
+      fontSize:`${typography.titlePrice?.size || 16}px`,
+      fontWeight: fw(typography.titlePrice?.weight),
+      color: colors.titleText || "#000",
     },
-    productPrice: {
-      fontSize: `${typography.titlePrice.size}px`,
-      fontWeight: typography.titlePrice.weight === "Bold" ? "bold" : "normal",
-      color: colors.price || "#000000",
-      textAlign: "left",
-      display: "flex",
-      flexDirection: "row-reverse",
-      gap: "8px",
+    price: {
+      fontSize:`${typography.titlePrice?.size || 16}px`,
+      fontWeight: fw(typography.titlePrice?.weight),
+      color: colors.price || "#000",
+      display:"flex", flexDirection:"row-reverse", gap:"8px",
     },
-    comparePrice: {
-      fontSize: `${typography.titlePrice.size - 4}px`,
-      textDecoration: "line-through",
+    compare: {
+      fontSize:`${(typography.titlePrice?.size || 16) - 4}px`,
+      textDecoration:"line-through",
       color: colors.comparedPrice || "#FF0000",
-      marginLeft: "5px",
     },
-    quantityContainer: {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
+    qtyBox: {
+      marginTop:"4px",
+      width:"25px",
+      padding:"4px 0",
+      display:"flex", justifyContent:"center", alignItems:"center",
       backgroundColor: colors.quantityBackground
-        ? `${colors.quantityBackground}40`
-        : `${themeColor}40`,
-      borderRadius: "4px",
-      padding: "4px 0px",
-      marginTop: "4px",
-      width: "25px",
+        ? `${colors.quantityBackground}40` : `${themeColor}40`,
+      borderRadius:"4px",
     },
-    quantityText: {
-      fontSize: `${typography.quantityPrice.size}px`,
-      fontWeight:
-        typography.quantityPrice.fontStyle === "Bold" ? "bold" : "normal",
-      color: colors.quantityText || "#000000",
-      lineHeight: "1",
+    qty: {
+      fontSize:`${typography.quantityPrice?.size || 13}px`,
+      fontWeight: fw(typography.quantityPrice?.fontStyle),
+      color: colors.quantityText || "#000",
+      lineHeight:1,
     },
-    plusIcon: {
-      margin: "0 10px",
-      fontSize: "30px",
-      color: colors.titleText || "#000000",
-    },
+    plus: { fontSize:"30px", margin:"0 10px", color: colors.titleText || "#000" },
     footer: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      backgroundColor: colors.footerBackground || "#F6F6F7",
-      padding: "15px",
-      borderRadius: getBorderRadius(shapes.footer),
-      border: `${borderThickness.footer}px solid ${colors.border || "#E1E3E5"}`,
-      marginTop: `${spacing.footerTop}px`,
-      marginBottom: `${spacing.footerBottom}px`,
-      position: "relative",
+      position:"relative",
+      margin:`${spacing.footerTop || 20}px 0 ${spacing.footerBottom || 10}px`,
+      padding:"15px",
+      display:"flex",
+      alignItems:"center",
+      justifyContent:"space-between",
+      background: colors.footerBackground || "#F6F6F7",
+      borderRadius: radius(shapes.footer),
+      border: `${borderThickness.footer || 0}px solid ${
+                colors.border || "#E1E3E5"}`,
     },
     footerText: {
-      fontSize: `${typography.titlePrice.size}px`,
-      fontWeight: "bold",
-      color: colors.footerText ? colors.footerText : themeColor,
-      flex: 1,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
+      fontSize:`${typography.titlePrice?.size || 16}px`,
+      fontWeight:"bold",
+      color: colors.footerText || themeColor,
+      flex:1,
+      display:"flex",
+      justifyContent:"space-between",
     },
     button: {
-      backgroundColor: colors.buttonBackground
-        ? colors.buttonBackground
-        : themeColor,
-      color: colors.addToCartText || "#FFFFFF",
-      border: `${borderThickness.addToCart}px solid ${colors.buttonBorder ? colors.buttonBorder : themeColor}`,
-      borderRadius: getBorderRadius(shapes.addToCart),
-      padding: "12px 20px",
-      cursor: "pointer",
-      fontSize: `${typography.titlePrice.size}px`,
-      fontWeight: "bold",
-      width: "100%",
+      width:"100%",
+      padding:"12px 20px",
+      fontSize:`${typography.titlePrice?.size || 16}px`,
+      fontWeight:"bold",
+      background: colors.buttonBackground || themeColor,
+      color: colors.addToCartText || "#FFF",
+      border:`${borderThickness.addToCart || 2}px solid ${
+              colors.buttonBorder || themeColor}`,
+      borderRadius: radius(shapes.addToCart),
+      cursor:"pointer",
     },
-    highlight: {
-      backgroundColor: colors.highlightBackground
-        ? colors.highlightBackground
-        : themeColor,
-      color: colors.highlightText || "#FFFFFF",
-      padding: "2px 10px",
-      borderRadius: "4px",
-      fontSize: `${typography.highlight.size}px`,
-      fontWeight: typography.highlight.fontStyle === "Bold" ? "bold" : "normal",
-      textAlign: "center",
-      marginBottom: "15px",
-      animation: isBlinking ? "blink 1s infinite" : "none",
+    badge: {
+      position:"absolute", top:"-9px", right:"30px",
+      padding:"2px 10px", borderRadius:"4px",
+      fontSize:`${typography.highlight?.size || 10.5}px`,
+      fontWeight: fw(typography.highlight?.fontStyle),
+      color: colors.highlightText || "#FFF",
+      background: colors.highlightBackground || themeColor,
       border: highlightStyle === "outline" ? "1px solid #000" : "none",
-      display: highlightOption !== "none" ? "block" : "none",
-      position: "absolute",
-      top: "-9px",
-      right: "30px",
+      animation: isBlinking ? "blink 1s infinite" : "none",
     },
-    timer: {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      marginTop: "5px",
-    },
-    timerTitle: {
-      fontSize: `${typography.highlight.size}px`,
-      color: colors.highlightText || "#FFFFFF",
-      marginBottom: "5px",
-    },
-    timerDigits: {
-      fontSize: `${parseInt(typography.highlight.size) + 2}px`,
-      fontWeight: "bold",
-      color: colors.highlightText || "#FFFFFF",
-    },
+    timerWrap:{ display:"flex", flexDirection:"column", alignItems:"center" },
+    timerText:{ marginBottom:"5px" },
+    timerDigits:{ fontWeight:"bold",
+      fontSize:`${parseInt(typography.highlight?.size || 10.5,10)+2}px` },
   };
 
-  // Function to render the highlight section based on highlightOption
-  const renderHighlight = () => {
-    if (highlightOption === "none") return null;
-
-    return (
-      <div className="">
-        <div className="badge_content_wrapper" style={bundleStyles.highlight}>
-          {highlightOption === "text" && <div>{highlightTitle}</div>}
-          {highlightOption === "timer" && (
-            <div className="bundle-timer" style={bundleStyles.timer}>
-              <div className="timer-title" style={bundleStyles.timerTitle}>
-                {highlightTimerTitle}
-              </div>
-              <div className="timer-digits" style={bundleStyles.timerDigits}>
-                {timerFormat === "dd:hh:mm:ss" ? "01:23:45:67" : "23:45:67"}
-              </div>
-            </div>
-          )}
+  /* -------------------------------------------------------------- */
+  /*  Small render helpers                                          */
+  /* -------------------------------------------------------------- */
+  const Highlight = () =>
+    highlightOption === "none" ? null :
+    highlightOption === "text" ? (
+      <div style={css.badge}>{highlightTitle}</div>
+    ) : (
+      <div style={css.badge}>
+        <div style={css.timerWrap}>
+          <div style={{...css.timerText,...css.badge}}>{highlightTimerTitle}</div>
+          <div style={{...css.timerDigits,...css.badge,fontWeight:"bold"}}>
+            {timerFormat === "dd:hh:mm:ss" ? "01:23:45:67" : "23:45:67"}
+          </div>
         </div>
       </div>
     );
-  };
 
-  console.log("bundleStyles", bundleStyles);
-
-  // Function to render product items with plus icons between them
-  const renderProductsWithIcons = () => {
-    const items = [];
-    products.forEach((product, index) => {
-      items.push(
-        <div
-          key={`product-${product.id}`}
-          className="bundle-product-item"
-          style={bundleStyles.productItem}
-        >
-          <div className="product-image" style={bundleStyles.productImage}>
-            {product.image ? (
-              <img
-                src={product.image}
-                alt={product.name}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  borderRadius: bundleStyles.productImage.borderRadius,
-                }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  // backgroundColor: "#E1E3E5",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                {/* {product.name ? product.name.charAt(0) : "P"} */}
-                <img
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                  src="https://app.rapibundle.com/images/shirt.png"
-                  alt=""
-                />
-              </div>
-            )}
-          </div>
-          <div className="product-contents" style={{ flex: 1 }}>
-            <div
-              className="title_price_container"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-              <div className="product-title" style={bundleStyles.productTitle}>
-                {product.name || `Product ${index + 1}`}
-              </div>
-              {settings.showPrices && (
-                <div
-                  className="product-price"
-                  style={bundleStyles.productPrice}
-                >
-                  $19.99
-                  {settings.showComparePrice && (
-                    <span
-                      className="compare-price"
-                      style={bundleStyles.comparePrice}
-                    >
-                      $29.99
-                    </span>
-                  )}
-                </div>
+  const Products = () =>
+    products.flatMap((p, i) => [
+      <div key={`p-${p.id}`} style={css.product}>
+        <img src={p.image} alt={p.name} style={css.img} />
+        <div style={{ flex:1 }}>
+          <div style={css.title}>{p.name}</div>
+          {settings.showPrices && (
+            <div style={css.price}>
+              $19.99
+              {settings.showComparePrice && (
+                <span style={css.compare}>$29.99</span>
               )}
             </div>
-            <div
-              className="quantity-container"
-              style={bundleStyles.quantityContainer}
-            >
-              <span className="quantity-text" style={bundleStyles.quantityText}>
-                x{product.quantity}
-              </span>
-            </div>
-          </div>
-        </div>,
-      );
-
-      // Add plus icon between products
-      if (index < products.length - 1) {
-        items.push(
-          <div
-            key={`plus-${index}`}
-            className="plus-icon"
-            style={bundleStyles.plusIcon}
-          >
-            +
-          </div>,
-        );
-      }
-    });
-
-    return items;
-  };
-
-  return (
-    <Card title="Live Preview">
-      <div className="bundle-preview-container">
-        <div
-          className={`bundle-container template-${selectedTemplate} color-${selectedColor}`}
-          style={bundleStyles.container}
-        >
-          <div className="header-wrapper" style={bundleStyles.header}>
-            {headerText && (
-              <div className="bundle-header" style={bundleStyles.headerTitle}>
-                {headerText}
-              </div>
-            )}
-            <span>🛒</span>
-          </div>
-
-          <div
-            className="bundle-product-container"
-            style={bundleStyles.productContainer}
-          >
-            {renderProductsWithIcons()}
-          </div>
-
-          <div className="footer_wrapper">
-            <div className="bundle-footer" style={bundleStyles.footer}>
-              {renderHighlight()}
-
-              <div className="footer-text" style={bundleStyles.footerText}>
-                {footerText}
-                <span style={{ color: "#000" }}>$59.97</span>
-              </div>
-            </div>
-            <button className="bundle-button" style={bundleStyles.button}>
-              {buttonText}
-            </button>
+          )}
+          <div style={css.qtyBox}>
+            <span style={css.qty}>x{p.quantity}</span>
           </div>
         </div>
+      </div>,
+      i < products.length - 1 ? (
+        <div key={`plus-${i}`} style={css.plus}>+</div>
+      ) : null,
+    ]);
+
+  /* -------------------------------------------------------------- */
+  /*  JSX                                                           */
+  /* -------------------------------------------------------------- */
+  return (
+    <Card title="Live Preview">
+      <div style={css.container} className={`template-${selectedTemplate}`}>
+        {headerText && (
+          <div style={css.header}>
+            <div style={css.headerTitle}>{headerText}</div>
+            <span role="img" aria-label="cart">🛒</span>
+          </div>
+        )}
+
+        <div style={css.bodyWrap}><Products /></div>
+
+        <div style={css.footer}>
+          <Highlight />
+          <div style={css.footerText}>
+            {footerText} <span style={{ color:"#000" }}>$59.97</span>
+          </div>
+        </div>
+
+        <button type="button" style={css.button}>{buttonText}</button>
       </div>
     </Card>
   );

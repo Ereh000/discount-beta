@@ -1,4 +1,6 @@
-import React, { useState, useCallback } from "react";
+// Components/Productbundle/BundleSettings.jsx
+
+import { useState, useCallback } from "react";
 import {
   Card,
   TextField,
@@ -28,12 +30,9 @@ export default function BundleSettingsCard({
   setButtonText,
   position,
   setPosition,
-  publishOption,
-  setPublishOption,
-  selectedTemplate,
-  setSelectedTemplate,
-  selectedColor,
-  setSelectedColor,
+
+  // selectedColor,
+  // setSelectedColor,
   settings,
   handleSettingChange,
   // Pricing options
@@ -65,8 +64,6 @@ export default function BundleSettingsCard({
   setProducts,
   handleAddProduct,
   handleRemoveProduct,
-  handleProductNameChange,
-  handleProductQuantityChange,
   // Fonts and sizes
   typography,
   setTypography,
@@ -76,8 +73,6 @@ export default function BundleSettingsCard({
   setShapes,
   productImageSize,
   setProductImageSize,
-  iconStyle,
-  setIconStyle,
   borderThickness,
   setBorderThickness,
   // Colors
@@ -105,10 +100,6 @@ export default function BundleSettingsCard({
   );
 
   // Handler for template changes
-  const handleTemplateChange = useCallback(
-    (value) => setSelectedTemplate(value),
-    [setSelectedTemplate],
-  );
 
   const tabs = [
     {
@@ -140,15 +131,10 @@ export default function BundleSettingsCard({
     [],
   );
 
-  const handlePublishChange = useCallback(
-    (_, value) => setPublishOption(value),
-    [],
-  );
-
   return (
     <>
       <LegacyCard>
-        <div className="tab" style={{ padding: '7px 0' }}>
+        <div className="tab" style={{ padding: "7px 0" }}>
           <Tabs tabs={tabs} selected={selected} onSelect={handleTabChange} />
         </div>
       </LegacyCard>
@@ -237,399 +223,6 @@ export default function BundleSettingsCard({
                 />
               </BlockStack>
 
-              <BlockStack gap="300">
-                <Text variant="headingMd" as="h3">
-                  Publish Bundle
-                </Text>
-                <RadioButton
-                  label="Immediately"
-                  checked={publishOption === "immediately"}
-                  id="immediately"
-                  name="publish"
-                  onChange={handlePublishChange}
-                />
-                <RadioButton
-                  label="Schedule"
-                  checked={publishOption === "schedule"}
-                  id="schedule"
-                  name="publish"
-                  onChange={handlePublishChange}
-                />
-              </BlockStack>
-
-              {/* Template selection section */}
-              <BlockStack gap="300">
-                <Text variant="headingMd" as="h3">
-                  Template
-                </Text>
-
-                {/* Color selector with color swatches */}
-                <div
-                  className="color__selector"
-                  style={{
-                    background: "white",
-                    zIndex: "10",
-                  }}
-                >
-                  <Select
-                    label="Color"
-                    labelHidden
-                    options={[
-                      {
-                        label: (
-                          <span style={{ display: "flex", alignItems: "center" }}>
-                            <span
-                              style={{
-                                display: "inline-block",
-                                width: "16px",
-                                height: "16px",
-                                backgroundColor: "black",
-                                borderRadius: "50%",
-                                marginRight: "8px",
-                              }}
-                            ></span>
-                            Black
-                          </span>
-                        ),
-                        value: "black",
-                      },
-                      {
-                        label: (
-                          <span style={{ display: "flex", alignItems: "center" }}>
-                            <span
-                              style={{
-                                display: "inline-block",
-                                width: "16px",
-                                height: "16px",
-                                backgroundColor: "purple",
-                                borderRadius: "50%",
-                                marginRight: "8px",
-                              }}
-                            ></span>
-                            Purple
-                          </span>
-                        ),
-                        value: "purple",
-                      },
-                      {
-                        label: (
-                          <span style={{ display: "flex", alignItems: "center" }}>
-                            <span
-                              style={{
-                                display: "inline-block",
-                                width: "16px",
-                                height: "16px",
-                                backgroundColor: "blue",
-                                borderRadius: "50%",
-                                marginRight: "8px",
-                              }}
-                            ></span>
-                            Blue
-                          </span>
-                        ),
-                        value: "blue",
-                      },
-                      {
-                        label: (
-                          <span style={{ display: "flex", alignItems: "center" }}>
-                            <span
-                              style={{
-                                display: "inline-block",
-                                width: "16px",
-                                height: "16px",
-                                backgroundColor: "teal",
-                                borderRadius: "50%",
-                                marginRight: "8px",
-                              }}
-                            ></span>
-                            Teal
-                          </span>
-                        ),
-                        value: "teal",
-                      },
-                      {
-                        label: (
-                          <span style={{ display: "flex", alignItems: "center" }}>
-                            <span
-                              style={{
-                                display: "inline-block",
-                                width: "16px",
-                                height: "16px",
-                                backgroundColor: "green",
-                                borderRadius: "50%",
-                                marginRight: "8px",
-                              }}
-                            ></span>
-                            Green
-                          </span>
-                        ),
-                        value: "green",
-                      },
-                      {
-                        label: (
-                          <span style={{ display: "flex", alignItems: "center" }}>
-                            <span
-                              style={{
-                                display: "inline-block",
-                                width: "16px",
-                                height: "16px",
-                                backgroundColor: "pink",
-                                borderRadius: "50%",
-                                marginRight: "8px",
-                              }}
-                            ></span>
-                            Pink
-                          </span>
-                        ),
-                        value: "pink",
-                      },
-                      {
-                        label: (
-                          <span style={{ display: "flex", alignItems: "center" }}>
-                            <span
-                              style={{
-                                display: "inline-block",
-                                width: "16px",
-                                height: "16px",
-                                backgroundColor: "red",
-                                borderRadius: "50%",
-                                marginRight: "8px",
-                              }}
-                            ></span>
-                            Red
-                          </span>
-                        ),
-                        value: "red",
-                      },
-                      {
-                        label: (
-                          <span style={{ display: "flex", alignItems: "center" }}>
-                            <span
-                              style={{
-                                display: "inline-block",
-                                width: "16px",
-                                height: "16px",
-                                backgroundColor: "orange",
-                                borderRadius: "50%",
-                                marginRight: "8px",
-                              }}
-                            ></span>
-                            Orange
-                          </span>
-                        ),
-                        value: "orange",
-                      },
-                      {
-                        label: (
-                          <span style={{ display: "flex", alignItems: "center" }}>
-                            <span
-                              style={{
-                                display: "inline-block",
-                                width: "16px",
-                                height: "16px",
-                                backgroundColor: "yellow",
-                                borderRadius: "50%",
-                                marginRight: "8px",
-                              }}
-                            ></span>
-                            Yellow
-                          </span>
-                        ),
-                        value: "yellow",
-                      },
-                      {
-                        label: (
-                          <span style={{ display: "flex", alignItems: "center" }}>
-                            <span
-                              style={{
-                                display: "inline-block",
-                                width: "16px",
-                                height: "16px",
-                                backgroundColor: "#98FB98",
-                                borderRadius: "50%",
-                                marginRight: "8px",
-                              }}
-                            ></span>
-                            Mint
-                          </span>
-                        ),
-                        value: "mint",
-                      },
-                    ]}
-                    onChange={setSelectedColor}
-                    value={selectedColor}
-                  />
-                </div>
-
-                <div style={{ position: "relative" }}>
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(2, 1fr)",
-                      gap: "16px",
-                      marginBottom: "16px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        border: "1px solid #e1e3e5",
-                        borderRadius: "8px",
-                        padding: "16px",
-                        position: "relative",
-                      }}
-                    >
-                      <div
-                        style={{
-                          borderRadius: "4px",
-                          height: "120px",
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "8px",
-                        }}
-                      >
-                        <img
-                          alt=""
-                          width="100%"
-                          height="100%"
-                          style={{
-                            // objectFit: 'cover',
-                            objectPosition: "center",
-                          }}
-                          src="https://app.rapibundle.com/images/templates/original.webp"
-                        />
-                      </div>
-                      <RadioButton
-                        label="Royal"
-                        checked={selectedTemplate === "royal"}
-                        id="royal"
-                        name="template"
-                        onChange={() => handleTemplateChange("royal")}
-                      />
-                    </div>
-
-                    <div
-                      style={{
-                        border: "1px solid #e1e3e5",
-                        borderRadius: "8px",
-                        padding: "16px",
-                        position: "relative",
-                      }}
-                    >
-                      <div
-                        style={{
-                          borderRadius: "4px",
-                          height: "120px",
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "8px",
-                        }}
-                      >
-                        <img
-                          alt=""
-                          width="100%"
-                          height="100%"
-                          style={{
-                            // objectFit: 'cover',
-                            objectPosition: "center",
-                          }}
-                          src="https://app.rapibundle.com/images/templates/heavy.webp"
-                        />
-                      </div>
-
-                      <RadioButton
-                        label="Block"
-                        checked={selectedTemplate === "blockk"}
-                        id="blockk"
-                        name="template"
-                        onChange={() => handleTemplateChange("blockk")}
-                      />
-                    </div>
-
-                    <div
-                      style={{
-                        border: "1px solid #e1e3e5",
-                        borderRadius: "8px",
-                        padding: "16px",
-                        position: "relative",
-                      }}
-                    >
-                      <div
-                        style={{
-                          borderRadius: "4px",
-                          height: "120px",
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "8px",
-                        }}
-                      >
-                        <img
-                          alt=""
-                          width="100%"
-                          height="100%"
-                          style={{
-                            // objectFit: 'cover',
-                            objectPosition: "center",
-                          }}
-                          src="https://app.rapibundle.com/images/templates/prestige.webp"
-                        />
-                      </div>
-                      <RadioButton
-                        label="Light"
-                        checked={selectedTemplate === "light"}
-                        id="light"
-                        name="template"
-                        onChange={() => handleTemplateChange("light")}
-                      />
-                    </div>
-
-                    <div
-                      style={{
-                        border: "1px solid #e1e3e5",
-                        borderRadius: "8px",
-                        padding: "16px",
-                        position: "relative",
-                      }}
-                    >
-                      <div
-                        style={{
-                          background: "#f6f6f7",
-                          borderRadius: "4px",
-                          height: "120px",
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "8px",
-                          padding: "8px",
-                        }}
-                      >
-                        <div
-                          style={{
-                            background: "#e1e3e5",
-                            height: "8px",
-                            width: "90%",
-                            borderRadius: "2px",
-                          }}
-                        ></div>
-                        <div
-                          style={{
-                            background: "#e1e3e5",
-                            height: "8px",
-                            width: "80%",
-                            borderRadius: "2px",
-                          }}
-                        ></div>
-                      </div>
-                      <RadioButton
-                        label="Prestige"
-                        checked={selectedTemplate === "prestige"}
-                        id="prestige"
-                        name="template"
-                        onChange={() => handleTemplateChange("prestige")}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </BlockStack>
-
               {/* Additional settings */}
               <BlockStack gap="300">
                 <Text variant="headingMd" as="h3">
@@ -670,43 +263,6 @@ export default function BundleSettingsCard({
                   <label htmlFor="showComparePrice">
                     Show product compare-at price
                   </label>
-                </InlineStack>
-
-                <InlineStack align="start">
-                  <input
-                    type="checkbox"
-                    id="skipCart"
-                    checked={settings.skipCart}
-                    onChange={() => handleSettingChange("skipCart")}
-                    style={{ marginRight: "8px" }}
-                  />
-                  <label htmlFor="skipCart">
-                    Skip cart and go to checkout option
-                  </label>
-                </InlineStack>
-
-                <InlineStack align="start">
-                  <input
-                    type="checkbox"
-                    id="redirectToProduct"
-                    checked={settings.redirectToProduct}
-                    onChange={() => handleSettingChange("redirectToProduct")}
-                    style={{ marginRight: "8px" }}
-                  />
-                  <label htmlFor="redirectToProduct">
-                    Redirect to the Product Page
-                  </label>
-                </InlineStack>
-
-                <InlineStack align="start">
-                  <input
-                    type="checkbox"
-                    id="redirectToNewTab"
-                    checked={settings.redirectToNewTab}
-                    onChange={() => handleSettingChange("redirectToNewTab")}
-                    style={{ marginRight: "8px" }}
-                  />
-                  <label htmlFor="redirectToNewTab">Redirect to a new Tab</label>
                 </InlineStack>
               </BlockStack>
             </BlockStack>
@@ -797,7 +353,8 @@ export default function BundleSettingsCard({
                                     ...updatedProducts[index],
                                     name: selectedProduct.title,
                                     productId: selectedProduct.id,
-                                    image: selectedProduct.images[0]?.originalSrc,
+                                    image:
+                                      selectedProduct.images[0]?.originalSrc,
                                     productHandle: selectedProduct.handle,
                                   };
                                   setProducts(updatedProducts);
@@ -1068,11 +625,11 @@ export default function BundleSettingsCard({
                     <TextField
                       label="Header Size"
                       type="number"
-                      value={typography.header.size}
+                      value={typography?.header?.size || "18"}
                       onChange={(value) =>
                         setTypography((prev) => ({
                           ...prev,
-                          header: { ...prev.header, size: value },
+                          header: { ...prev?.header, size: value },
                         }))
                       }
                       autoComplete="off"
@@ -1086,11 +643,11 @@ export default function BundleSettingsCard({
                         { label: "Regular", value: "Regular" },
                         { label: "Bold", value: "Bold" },
                       ]}
-                      value={typography.header.weight}
+                      value={typography?.header?.weight || "Bold"}
                       onChange={(value) =>
                         setTypography((prev) => ({
                           ...prev,
-                          header: { ...prev.header, weight: value },
+                          header: { ...prev?.header, weight: value },
                         }))
                       }
                     />
@@ -1103,11 +660,11 @@ export default function BundleSettingsCard({
                     <TextField
                       label="Title & price Size"
                       type="number"
-                      value={typography.titlePrice.size}
+                      value={typography?.titlePrice?.size || "16"}
                       onChange={(value) =>
                         setTypography((prev) => ({
                           ...prev,
-                          titlePrice: { ...prev.titlePrice, size: value },
+                          titlePrice: { ...prev?.titlePrice, size: value },
                         }))
                       }
                       autoComplete="off"
@@ -1120,11 +677,11 @@ export default function BundleSettingsCard({
                         { label: "Regular", value: "Regular" },
                         { label: "Bold", value: "Bold" },
                       ]}
-                      value={typography.titlePrice.weight}
+                      value={typography?.titlePrice?.weight || "Normal"}
                       onChange={(value) =>
                         setTypography((prev) => ({
                           ...prev,
-                          titlePrice: { ...prev.titlePrice, weight: value },
+                          titlePrice: { ...prev?.titlePrice, weight: value },
                         }))
                       }
                     />
@@ -1156,7 +713,10 @@ export default function BundleSettingsCard({
                         value={spacing.bundleBottom}
                         suffix="px"
                         onChange={(value) =>
-                          setSpacing((prev) => ({ ...prev, bundleBottom: value }))
+                          setSpacing((prev) => ({
+                            ...prev,
+                            bundleBottom: value,
+                          }))
                         }
                         autoComplete="off"
                       />
@@ -1183,7 +743,10 @@ export default function BundleSettingsCard({
                         value={spacing.footerBottom}
                         suffix="px"
                         onChange={(value) =>
-                          setSpacing((prev) => ({ ...prev, footerBottom: value }))
+                          setSpacing((prev) => ({
+                            ...prev,
+                            footerBottom: value,
+                          }))
                         }
                         autoComplete="off"
                       />
@@ -1243,7 +806,9 @@ export default function BundleSettingsCard({
                       onChange={(e) => setProductImageSize(e.target.value)}
                       style={{ width: "100%" }}
                     />
-                    <div style={{ textAlign: "right" }}>{productImageSize}px</div>
+                    <div style={{ textAlign: "right" }}>
+                      {productImageSize}px
+                    </div>
                   </div>
                 </BlockStack>
 
@@ -1329,7 +894,7 @@ export default function BundleSettingsCard({
                     <Text>Background</Text>
                     <input
                       type="color"
-                      value={colors.background}
+                      value={colors?.background || "#ffffff"}
                       onChange={(e) =>
                         setColors((prev) => ({
                           ...prev,
@@ -1343,9 +908,12 @@ export default function BundleSettingsCard({
                     <Text>Border</Text>
                     <input
                       type="color"
-                      value={colors.border}
+                      value={colors?.border || "#e1e5e9"}
                       onChange={(e) =>
-                        setColors((prev) => ({ ...prev, border: e.target.value }))
+                        setColors((prev) => ({
+                          ...prev,
+                          border: e.target.value,
+                        }))
                       }
                       style={{ width: "100%", height: "36px" }}
                     />
@@ -1357,7 +925,7 @@ export default function BundleSettingsCard({
                     <Text>Footer background</Text>
                     <input
                       type="color"
-                      value={colors.footerBackground}
+                      value={colors?.footerBackground || "#f6f6f7"}
                       onChange={(e) =>
                         setColors((prev) => ({
                           ...prev,
@@ -1371,7 +939,7 @@ export default function BundleSettingsCard({
                     <Text>Button background</Text>
                     <input
                       type="color"
-                      value={colors.buttonBackground}
+                      value={colors?.buttonBackground || "#000000"}
                       onChange={(e) =>
                         setColors((prev) => ({
                           ...prev,
@@ -1388,7 +956,7 @@ export default function BundleSettingsCard({
                     <Text>Highlight background</Text>
                     <input
                       type="color"
-                      value={colors.highlightBackground}
+                      value={colors?.highlightBackground || "#ff6b35"}
                       onChange={(e) =>
                         setColors((prev) => ({
                           ...prev,
@@ -1402,7 +970,7 @@ export default function BundleSettingsCard({
                     <Text>Quantity background</Text>
                     <input
                       type="color"
-                      value={colors.quantityBackground}
+                      value={colors?.quantityBackground || "#f6f6f7"}
                       onChange={(e) =>
                         setColors((prev) => ({
                           ...prev,
@@ -1424,7 +992,7 @@ export default function BundleSettingsCard({
                     <Text>Header</Text>
                     <input
                       type="color"
-                      value={colors.headerText}
+                      value={colors?.headerText || "#000000"}
                       onChange={(e) =>
                         setColors((prev) => ({
                           ...prev,
@@ -1438,7 +1006,7 @@ export default function BundleSettingsCard({
                     <Text>Title</Text>
                     <input
                       type="color"
-                      value={colors.titleText}
+                      value={colors?.titleText || "#000000"}
                       onChange={(e) =>
                         setColors((prev) => ({
                           ...prev,
@@ -1455,9 +1023,12 @@ export default function BundleSettingsCard({
                     <Text>Price</Text>
                     <input
                       type="color"
-                      value={colors.price}
+                      value={colors?.price || "#000000"}
                       onChange={(e) =>
-                        setColors((prev) => ({ ...prev, price: e.target.value }))
+                        setColors((prev) => ({
+                          ...prev,
+                          price: e.target.value,
+                        }))
                       }
                       style={{ width: "100%", height: "36px" }}
                     />
@@ -1466,7 +1037,7 @@ export default function BundleSettingsCard({
                     <Text>Compared Price</Text>
                     <input
                       type="color"
-                      value={colors.comparedPrice}
+                      value={colors?.comparedPrice || "#999999"}
                       onChange={(e) =>
                         setColors((prev) => ({
                           ...prev,
@@ -1483,7 +1054,7 @@ export default function BundleSettingsCard({
                     <Text>Highlight text</Text>
                     <input
                       type="color"
-                      value={colors.highlightText}
+                      value={colors?.highlightText || "#ffffff"}
                       onChange={(e) =>
                         setColors((prev) => ({
                           ...prev,
@@ -1497,7 +1068,7 @@ export default function BundleSettingsCard({
                     <Text>Add to cart text</Text>
                     <input
                       type="color"
-                      value={colors.addToCartText}
+                      value={colors?.addToCartText || "#ffffff"}
                       onChange={(e) =>
                         setColors((prev) => ({
                           ...prev,
@@ -1514,7 +1085,7 @@ export default function BundleSettingsCard({
                     <Text>Quantity text</Text>
                     <input
                       type="color"
-                      value={colors.quantityText}
+                      value={colors?.quantityText || "#000000"}
                       onChange={(e) =>
                         setColors((prev) => ({
                           ...prev,
@@ -1528,7 +1099,7 @@ export default function BundleSettingsCard({
                     <Text>Footer text</Text>
                     <input
                       type="color"
-                      value={colors.footerText}
+                      value={colors?.footerText || "#000000"}
                       onChange={(e) =>
                         setColors((prev) => ({
                           ...prev,
@@ -1549,25 +1120,3 @@ export default function BundleSettingsCard({
     </>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

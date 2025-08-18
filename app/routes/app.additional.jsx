@@ -22,8 +22,6 @@ export default function EditProductBundle() {
   const [footerText, setFooterText] = useState("Total :");
   const [buttonText, setButtonText] = useState("Claim Offer");
   const [position, setPosition] = useState("all");
-  const [publishOption, setPublishOption] = useState("immediately");
-  const [selectedTemplate, setSelectedTemplate] = useState("royal");
   const [selectedColor, setSelectedColor] = useState("purple");
   // Pricing options
   const [pricingOption, setPricingOption] = useState("default");
@@ -268,10 +266,6 @@ export default function EditProductBundle() {
             setButtonText={setButtonText}
             position={position}
             setPosition={setPosition}
-            publishOption={publishOption}
-            setPublishOption={setPublishOption}
-            selectedTemplate={selectedTemplate}
-            setSelectedTemplate={setSelectedTemplate}
             selectedColor={selectedColor}
             setSelectedColor={setSelectedColor}
             settings={settings}
@@ -326,7 +320,6 @@ export default function EditProductBundle() {
             alignment={alignment}
             footerText={footerText}
             buttonText={buttonText}
-            selectedTemplate={selectedTemplate}
             selectedColor={selectedColor}
             settings={settings}
             products={products} // Add this line
