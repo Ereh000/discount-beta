@@ -1,6 +1,6 @@
 // app/routes/app.product-bundle.$id.jsx
 
-import React, { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   Grid,
   Page,

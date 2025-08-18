@@ -5,18 +5,19 @@ import { json } from "@remix-run/node";
 import { fetchShop } from "../utils/getShop";
 
 export async function action({ request }) {
-  
   try {
     const formData = await request.formData();
     const bundleDataString = formData.get("bundleData");
-    
-    
+
     if (!bundleDataString) {
       console.error("No bundle data provided");
-      return json({
-        success: false,
-        error: "No bundle data provided."
-      }, { status: 400 });
+      return json(
+        {
+          success: false,
+          error: "No bundle data provided.",
+        },
+        { status: 400 },
+      );
     }
 
     let bundleData;
@@ -24,10 +25,13 @@ export async function action({ request }) {
       bundleData = JSON.parse(bundleDataString);
     } catch (parseError) {
       console.error("Error parsing bundle data:", parseError);
-      return json({
-        success: false,
-        error: "Invalid bundle data format."
-      }, { status: 400 });
+      return json(
+        {
+          success: false,
+          error: "Invalid bundle data format.",
+        },
+        { status: 400 },
+      );
     }
 
     const shop = await fetchShop(request);
@@ -58,7 +62,7 @@ export async function action({ request }) {
             button: bundleData.buttonText,
             position: bundleData.position,
             color: bundleData.selectedColor,
-            pricing: {  
+            pricing: {
               option: bundleData.pricingOption,
               discountPercentage: bundleData.discountPercentage,
               fixedDiscount: bundleData.fixedDiscount,
@@ -94,8 +98,8 @@ export async function action({ request }) {
       });
 
       if (bundleData.products && bundleData.products.length > 0) {
-        const validProducts = bundleData.products.filter(product => 
-          product.name && product.name.trim() !== ''
+        const validProducts = bundleData.products.filter(
+          (product) => product.name && product.name.trim() !== "",
         );
 
         if (validProducts.length > 0) {
@@ -119,10 +123,9 @@ export async function action({ request }) {
         message: "Bundle updated successfully!",
         bundleId: savedBundle.id,
       });
-
     } else {
       console.log("Creating new bundle");
-      
+
       // Check if a bundle with the same name already exists
       const existingBundle = await prisma.bundle.findFirst({
         where: {
@@ -135,7 +138,8 @@ export async function action({ request }) {
         console.log("Bundle with same name already exists:", existingBundle.id);
         return json({
           success: false,
-          error: "A bundle with this name already exists. Please choose a different name.",
+          error:
+            "A bundle with this name already exists. Please choose a different name.",
         });
       }
 
@@ -184,8 +188,8 @@ export async function action({ request }) {
 
       // Create bundle products
       if (bundleData.products && bundleData.products.length > 0) {
-        const validProducts = bundleData.products.filter(product => 
-          product.name && product.name.trim() !== ''
+        const validProducts = bundleData.products.filter(
+          (product) => product.name && product.name.trim() !== "",
         );
 
         if (validProducts.length > 0) {
@@ -210,15 +214,18 @@ export async function action({ request }) {
         bundleId: savedBundle.id,
       });
     }
-
   } catch (error) {
     console.error("Error saving bundle:", error);
     console.error("Error stack:", error.stack);
-    
-    return json({
-      success: false,
-      error: `Server error: ${error.message}`,
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
-    }, { status: 500 });
+
+    return json(
+      {
+        success: false,
+        error: `Server error: ${error.message}`,
+        details:
+          process.env.NODE_ENV === "development" ? error.stack : undefined,
+      },
+      { status: 500 },
+    );
   }
 }
