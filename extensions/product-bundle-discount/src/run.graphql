@@ -1,0 +1,27 @@
+query RunInput {
+  cart {
+    lines {
+      id
+      quantity
+      merchandise {
+        __typename
+        ... on ProductVariant {
+          id
+          product {
+            id
+          }
+        }
+      }
+    }
+    cost {
+      subtotalAmount {
+        amount
+      }
+    }  
+  }
+  shop {
+    metafield(namespace: "bundle-discounts", key: "all-bundles") {
+      value
+    }
+  }
+}

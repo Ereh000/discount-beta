@@ -19,7 +19,8 @@ const DEFAULT_BASIC_SETTINGS = {
   position: 'specific',
   selectedColor: '#000000',
   productImageSize: 50,
-  iconStyle: 'default'
+  iconStyle: 'default',
+  selectedResourceIds: [], // New field for selected resource IDs
 };
 
 const DEFAULT_PRICING_SETTINGS = {
@@ -106,6 +107,9 @@ export default function BundleSettingsCard({
   hasAllPositionBundle = false,
   isEdit = false,
   originalPosition = 'specific',
+  // New props for resource selection
+  selectedResources = [],
+  setSelectedResources = () => {},
 }) {
   const [selected, setSelected] = useState(0);
 
@@ -208,6 +212,9 @@ export default function BundleSettingsCard({
     hasAllPositionBundle,
     isEdit,
     originalPosition,
+    // Resource selection props
+    selectedResources,
+    setSelectedResources,
   };
 
   const renderTabContent = () => {
@@ -240,4 +247,4 @@ export default function BundleSettingsCard({
       </LegacyCard>
     </>
   );
-}  
+}

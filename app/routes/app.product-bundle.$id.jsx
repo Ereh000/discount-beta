@@ -133,6 +133,14 @@ export default function EditProductBundle() {
   const [showBanner, setShowBanner] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [bannerTone, setBannerTone] = useState("critical");
+  
+  // New state for selected resources
+  const [selectedResources, setSelectedResources] = useState(() => {
+    if (isEdit && data?.selectedResources) {
+      return data.selectedResources;
+    }
+    return [];
+  });
 
   // Handlers
   const handleSettingChange = useCallback((setting) => {
@@ -177,24 +185,57 @@ export default function EditProductBundle() {
     if (!hasSelectedProducts) {
       return { isValid: false, message: VALIDATION_MESSAGES.NO_PRODUCTS_SELECTED };
     }
-
+  
     if (!basicSettings?.bundleName?.trim()) {
       return { isValid: false, message: "Bundle name cannot be empty. Please provide a name for your bundle." };
     }
-
+  
+    // Resource picker validation
+    const validateResourceSelection = () => {
+      const position = basicSettings.position;
+      const hasSelectedResources = selectedResources && selectedResources.length > 0;
+      
+      switch (position) {
+        case "except":
+          if (!hasSelectedResources) {
+            return { isValid: false, message: VALIDATION_MESSAGES.NO_PRODUCTS_SELECTED_FOR_EXCEPT };
+          }
+          break;
+        case "specific":
+          if (!hasSelectedResources) {
+            return { isValid: false, message: VALIDATION_MESSAGES.NO_PRODUCTS_SELECTED_FOR_SPECIFIC };
+          }
+          break;
+        case "collections":
+          if (!hasSelectedResources) {
+            return { isValid: false, message: VALIDATION_MESSAGES.NO_COLLECTIONS_SELECTED };
+          }
+          break;
+        default:
+          // "all" position doesn't require resource selection
+          break;
+      }
+      return { isValid: true };
+    };
+  
+    const resourceValidation = validateResourceSelection();
+    if (!resourceValidation.isValid) {
+      return resourceValidation;
+    }
+  
     const positionValidation = validatePositionSettings(
       basicSettings.position, hasAllPositionBundle, isEdit, originalPosition
     );
     if (!positionValidation.isValid) {
       return positionValidation;
     }
-
+  
     if (existingBundleNames.includes(basicSettings.bundleName.trim())) {
       return { isValid: false, message: VALIDATION_MESSAGES.DUPLICATE_BUNDLE_NAME };
     }
-
+  
     return { isValid: true };
-  }, [products, basicSettings, validatePositionSettings, hasAllPositionBundle, isEdit, originalPosition, existingBundleNames]);
+  }, [products, basicSettings, selectedResources, validatePositionSettings, hasAllPositionBundle, isEdit, originalPosition, existingBundleNames]);
 
   const prepareBundleData = useCallback((status) => ({
     status,
@@ -226,8 +267,21 @@ export default function EditProductBundle() {
     settings: generalSettings,
     products,
     bundleId: id,
-    isEdit
-  }), [basicSettings, pricingSettings, highlightSettings, designSettings, generalSettings, products, id, isEdit]);
+    isEdit,
+    // Include selected resources
+    selectedResources,
+    selectedResourceIds: selectedResources.map(resource => resource.id),
+  }), [
+    basicSettings, 
+    pricingSettings, 
+    highlightSettings, 
+    designSettings, 
+    generalSettings, 
+    products, 
+    id, 
+    isEdit,
+    selectedResources
+  ]);
 
   const handleSave = useCallback(async (status) => {
     hideBanner();
@@ -240,6 +294,9 @@ export default function EditProductBundle() {
 
     try {
       const bundleData = prepareBundleData(status);
+
+      console.log("bundleData", bundleData);
+
       const formData = new FormData();
       formData.append("bundleData", JSON.stringify(bundleData));
       
@@ -253,7 +310,7 @@ export default function EditProductBundle() {
     }
   }, [hideBanner, validateBundle, prepareBundleData, fetcher, showErrorBanner]);
 
-  // Effects
+  // Effects  
   useEffect(() => {
     if (fetcher.data) {
       if (fetcher.data.success) {
@@ -304,6 +361,8 @@ export default function EditProductBundle() {
             hasAllPositionBundle={hasAllPositionBundle}
             isEdit={isEdit}
             originalPosition={originalPosition}
+            selectedResources={selectedResources}
+            setSelectedResources={setSelectedResources}
           />
         </Grid.Cell>
 

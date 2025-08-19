@@ -14,9 +14,9 @@ export const DEFAULT_BUNDLE_VALUES = {
   // Pricing settings
   pricing: {
     option: "default",
-    discountPercentage: "10",
-    fixedDiscount: "25",
-    fixedPrice: "99"
+    discountPercentage: "",
+    fixedDiscount: "",
+    fixedPrice: ""
   },
 
   // Highlight settings

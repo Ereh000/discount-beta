@@ -3,9 +3,19 @@
 import prisma from "../db.server";
 import { json } from "@remix-run/node";
 import { fetchShop } from "../utils/getShop";
+import { authenticate } from "../shopify.server";
+
+// Import utility functions
+import { createOrUpdateAutomaticDiscount } from "../utils/discount";
+import {
+  saveDiscountToMetafield,
+  updateAllBundleDiscountsMetafield,
+} from "../utils/metafield";
+import { validateDiscountSettings } from "../utils/validation";
 
 export async function action({ request }) {
   try {
+    const { admin } = await authenticate.admin(request);
     const formData = await request.formData();
     const bundleDataString = formData.get("bundleData");
 
@@ -34,6 +44,18 @@ export async function action({ request }) {
       );
     }
 
+    // Validate discount settings
+    const discountValidation = validateDiscountSettings(bundleData);
+    if (!discountValidation.isValid) {
+      return json(
+        {
+          success: false,
+          error: discountValidation.message,
+        },
+        { status: 400 },
+      );
+    }
+
     const shop = await fetchShop(request);
     const shopId = shop.id;
 
@@ -41,6 +63,7 @@ export async function action({ request }) {
     console.log("Is edit mode:", isEdit);
 
     let savedBundle;
+    let discountResult = null;
 
     if (isEdit) {
       console.log("Updating existing bundle with ID:", bundleData.bundleId);
@@ -49,7 +72,7 @@ export async function action({ request }) {
       savedBundle = await prisma.bundle.update({
         where: {
           id: parseInt(bundleData.bundleId),
-          shop: shopId, // Added for security
+          shop: shopId,
         },
         data: {
           status: bundleData.status,
@@ -85,6 +108,8 @@ export async function action({ request }) {
             borderThickness: bundleData.borderThickness,
             colors: bundleData.colors,
             general: bundleData.settings,
+            selectedResources: bundleData.selectedResources || [],
+            selectedResourceIds: bundleData.selectedResourceIds || [],
           },
           updatedAt: new Date(),
         },
@@ -116,12 +141,68 @@ export async function action({ request }) {
         }
       }
 
+      // Create/Update discount if pricing option is not default and bundle is published
+      if (
+        bundleData.pricingOption !== "default" &&
+        bundleData.status === "published"
+      ) {
+        try {
+          const discountData = {
+            bundleId: savedBundle.id,
+            bundleName: bundleData.bundleName,
+            pricingOption: bundleData.pricingOption,
+            discountValue:
+              bundleData.pricingOption === "percentage"
+                ? bundleData.discountPercentage
+                : bundleData.pricingOption === "fixedDiscount"
+                  ? bundleData.fixedDiscount
+                  : bundleData.fixedPrice,
+            selectedResourceIds: bundleData.selectedResourceIds || [],
+            position: bundleData.position,
+            products: bundleData.products || [], // Add this line
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+
+          // Create Shopify discount
+          discountResult = await createOrUpdateAutomaticDiscount(
+            admin,
+            discountData,
+            bundleData,
+          );
+
+          // Save to metafield
+          if (discountResult) {
+            discountData.shopifyDiscountId = discountResult.discountId;
+            await saveDiscountToMetafield(admin, shopId, discountData);
+            // Update consolidated metafield
+            await updateAllBundleDiscountsMetafield(admin, shopId);
+          }
+
+          console.log("Discount updated successfully");
+        } catch (discountError) {
+          console.error("Error updating discount:", discountError);
+          // Don't fail the bundle update if discount creation fails
+        }
+      }
+
       console.log("Bundle products updated successfully");
+
+      let message = "Bundle updated successfully!";
+      if (discountResult) {
+        if (discountResult.wasExisting) {
+          message += ` Updated existing discount "${discountResult.functionTitle}".`;
+        } else {
+          message += ` New discount "${discountResult.functionTitle}" was created.`;
+        }
+      }
 
       return json({
         success: true,
-        message: "Bundle updated successfully!",
+        message: message,
         bundleId: savedBundle.id,
+        discountId: discountResult?.discountId || null,
+        discountInfo: discountResult,
       });
     } else {
       console.log("Creating new bundle");
@@ -180,6 +261,8 @@ export async function action({ request }) {
             borderThickness: bundleData.borderThickness,
             colors: bundleData.colors,
             general: bundleData.settings,
+            selectedResources: bundleData.selectedResources || [],
+            selectedResourceIds: bundleData.selectedResourceIds || [],
           },
         },
       });
@@ -206,12 +289,68 @@ export async function action({ request }) {
         }
       }
 
+      // Create discount if pricing option is not default and bundle is published
+      if (
+        bundleData.pricingOption !== "default" &&
+        bundleData.status === "published"
+      ) {
+        try {
+          const discountData = {
+            bundleId: savedBundle.id,
+            bundleName: bundleData.bundleName,
+            pricingOption: bundleData.pricingOption,
+            discountValue:
+              bundleData.pricingOption === "percentage"
+                ? bundleData.discountPercentage
+                : bundleData.pricingOption === "fixedDiscount"
+                  ? bundleData.fixedDiscount
+                  : bundleData.fixedPrice,
+            selectedResourceIds: bundleData.selectedResourceIds || [],
+            position: bundleData.position,
+            products: bundleData.products || [], // Add this line
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+
+          // Create Shopify discount
+          discountResult = await createOrUpdateAutomaticDiscount(
+            admin,
+            discountData,
+            bundleData,
+          );
+
+          // Save to metafield
+          if (discountResult) {
+            discountData.shopifyDiscountId = discountResult.discountId;
+            await saveDiscountToMetafield(admin, shopId, discountData);
+            // Update consolidated metafield
+            await updateAllBundleDiscountsMetafield(admin, shopId);
+          }
+
+          console.log("Discount created successfully");
+        } catch (discountError) {
+          console.error("Error creating discount:", discountError);
+          // Don't fail the bundle creation if discount creation fails
+        }
+      }
+
       console.log("Bundle products created successfully");
+
+      let message = "Bundle created successfully!";
+      if (discountResult) {
+        if (discountResult.wasExisting) {
+          message += ` Updated existing discount "${discountResult.functionTitle}".`;
+        } else {
+          message += ` New discount "${discountResult.functionTitle}" was created.`;
+        }
+      }
 
       return json({
         success: true,
-        message: "Bundle created successfully!",
+        message: message,
         bundleId: savedBundle.id,
+        discountId: discountResult?.discountId || null,
+        discountInfo: discountResult,
       });
     }
   } catch (error) {
