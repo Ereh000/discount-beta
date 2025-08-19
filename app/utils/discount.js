@@ -1,5 +1,3 @@
-// utils/discount.js
-
 /**
  * Fetch the ID of the app's order discount function
  */
@@ -27,7 +25,7 @@ export async function getOrderDiscountFunctionId(admin) {
   );
 
   if (!orderDiscountFunction) {
-    throw new Error("Order discount function 'order-discount' not found or not deployed");
+    throw new Error("Order discount function 'product-bundle-discount' not found or not deployed");
   }
 
   return orderDiscountFunction.id;
@@ -61,14 +59,100 @@ export async function findExistingDiscount(admin, discountTitle) {
   const json = await response.json();
   const discountNodes = json.data?.discountNodes?.edges || [];
 
-  const existingDiscount = discountNodes.find(edge => {
-    const discount = edge.node.discount;
-    return discount && 
-           discount.title === discountTitle && 
-           discount.__typename === 'DiscountAutomaticApp';
-  });
+  console.log("All existing discounts:", discountNodes.map(edge => ({
+    id: edge.node.id,
+    title: edge.node.discount?.title,
+    type: edge.node.discount?.__typename
+  })));
 
-  return existingDiscount ? existingDiscount.node : null;
+  const existingDiscountNode = discountNodes.find(edge => {
+    const discount = edge.node.discount;
+    const isMatch = discount && 
+                   discount.title === discountTitle && 
+                   (discount.__typename === 'DiscountAutomaticApp' || !discount.__typename);
+    
+    if (isMatch) {
+      console.log(`Found matching discount: ${discount.title} with ID: ${edge.node.id}`);
+    }
+    
+    return isMatch;
+  })?.node;
+
+  return existingDiscountNode;
+}
+
+/**
+ * Update existing discount metafield separately
+ */
+async function updateDiscountMetafield(admin, discountId, metafieldData) {
+  try {
+    // First, get existing metafields to find the one we need to update
+    const getMetafieldsResponse = await admin.graphql(`
+      query getDiscountMetafields($id: ID!) {
+        discountNode(id: $id) {
+          metafields(first: 10, namespace: "bundle_discount") {
+            edges {
+              node {
+                id
+                namespace
+                key
+                value
+              }
+            }
+          }
+        }
+      }
+    `, {
+      variables: { id: discountId }
+    });
+
+    const metafieldsResult = await getMetafieldsResponse.json();
+    const existingMetafields = metafieldsResult.data?.discountNode?.metafields?.edges || [];
+    
+    // Find the config metafield
+    const configMetafield = existingMetafields.find(edge => 
+      edge.node.key === "config" && edge.node.namespace === "bundle_discount"
+    );
+
+    if (configMetafield) {
+      // Update existing metafield
+      const updateResponse = await admin.graphql(`
+        mutation metafieldUpdate($metafield: MetafieldInput!) {
+          metafieldUpdate(metafield: $metafield) {
+            metafield {
+              id
+              namespace
+              key
+              value
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+      `, {
+        variables: {
+          metafield: {
+            id: configMetafield.node.id,
+            value: JSON.stringify(metafieldData)
+          }
+        }
+      });
+
+      const updateResult = await updateResponse.json();
+      if (updateResult.data?.metafieldUpdate?.userErrors?.length > 0) {
+        console.error("Metafield update errors:", updateResult.data.metafieldUpdate.userErrors);
+      } else {
+        console.log("Metafield updated successfully");
+      }
+    } else {
+      console.log("No existing metafield found, will be created with new discount");
+    }
+  } catch (error) {
+    console.error("Error updating discount metafield:", error);
+    // Don't throw - this shouldn't fail the discount update
+  }
 }
 
 /**
@@ -78,8 +162,9 @@ export async function createOrUpdateAutomaticDiscount(admin, discountData, bundl
   const functionId = await getOrderDiscountFunctionId(admin);
   const discountTitle = `Bundle Discount - ${bundleData.bundleName}`;
   
-  // Check for existing discount
-  const existingDiscount = await findExistingDiscount(admin, discountTitle);
+  console.log(`Looking for existing discount with title: ${discountTitle}`);
+  
+  const existingDiscountNode = await findExistingDiscount(admin, discountTitle);
   
   // Prepare metafield data
   const metafieldData = {
@@ -96,15 +181,16 @@ export async function createOrUpdateAutomaticDiscount(admin, discountData, bundl
 
   let mutation, variables, operationType;
 
-  if (existingDiscount) {
-    // Update existing discount
+  if (existingDiscountNode) {
+    // --- Update Existing Discount (WITHOUT metafields to avoid uniqueness error) ---
+    console.log(`Updating existing discount '${discountTitle}' with ID: ${existingDiscountNode.id}`);
+    
     mutation = `
       mutation discountAutomaticAppUpdate($automaticAppDiscount: DiscountAutomaticAppInput!, $id: ID!) {
         discountAutomaticAppUpdate(automaticAppDiscount: $automaticAppDiscount, id: $id) {
           automaticAppDiscount {
             title
             status
-            discountId
             appDiscountType {
               functionId
             }
@@ -118,7 +204,7 @@ export async function createOrUpdateAutomaticDiscount(admin, discountData, bundl
     `;
 
     variables = {
-      id: existingDiscount.id,
+      id: existingDiscountNode.id,
       automaticAppDiscount: {
         title: discountTitle,
         functionId: functionId,
@@ -127,20 +213,15 @@ export async function createOrUpdateAutomaticDiscount(admin, discountData, bundl
           productDiscounts: true,
           shippingDiscounts: true
         },
-        startsAt: new Date().toISOString(),
-        metafields: [
-          {
-            namespace: "bundle_discount",
-            key: "config",
-            value: JSON.stringify(metafieldData),
-            type: "json" // This was missing - causing the error!
-          }
-        ]
+        startsAt: new Date().toISOString()
+        // NO metafields here - we'll update them separately
       }
     };
     operationType = 'update';
   } else {
-    // Create new discount
+    // --- Create New Automatic Discount (WITH metafields) ---
+    console.log(`No existing discount found. Creating new discount: '${discountTitle}'`);
+    
     mutation = `
       mutation discountAutomaticAppCreate($automaticAppDiscount: DiscountAutomaticAppInput!) {
         discountAutomaticAppCreate(automaticAppDiscount: $automaticAppDiscount) {
@@ -176,7 +257,7 @@ export async function createOrUpdateAutomaticDiscount(admin, discountData, bundl
             namespace: "bundle_discount",
             key: "config",
             value: JSON.stringify(metafieldData),
-            type: "json" // This was missing - causing the error!
+            type: "json"
           }
         ]
       }
@@ -184,6 +265,7 @@ export async function createOrUpdateAutomaticDiscount(admin, discountData, bundl
     operationType = 'create';
   }
 
+  // --- Execute Create or Update Mutation ---
   console.log(`Executing ${operationType} operation for '${discountTitle}'`);
   
   const response = await admin.graphql(mutation, { variables });
@@ -205,16 +287,21 @@ export async function createOrUpdateAutomaticDiscount(admin, discountData, bundl
     throw new Error(`Failed to ${operationType} the bundle discount function.`);
   }
 
+  // If updating, update the metafield separately
+  if (operationType === 'update') {
+    await updateDiscountMetafield(admin, existingDiscountNode.id, metafieldData);
+  }
+
   const discountInfo = mutationResult.automaticAppDiscount;
   console.log(`Successfully ${operationType}d Automatic Discount '${discountTitle}':`, discountInfo);
   
   return {
     title: discountInfo.title,
     status: discountInfo.status,
-    discountId: operationType === 'create' ? discountInfo.discountId : existingDiscount.id,
+    discountId: operationType === 'create' ? discountInfo.discountId : existingDiscountNode.id,
     appDiscountType: discountInfo.appDiscountType,
     operation: operationType,
     functionTitle: discountTitle,
-    wasExisting: !!existingDiscount
+    wasExisting: !!existingDiscountNode
   };
 }

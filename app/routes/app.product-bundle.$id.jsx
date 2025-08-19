@@ -85,7 +85,10 @@ export async function loader({ request, params }) {
     return json({ 
       success: true, 
       isEdit: true, 
-      data: bundle,
+      data: {
+        ...bundle,
+        selectedResources: bundle.settings?.selectedResources || []
+      },
       hasAllPositionBundle,
       existingBundleNames: existingBundles
         .filter((bundle) => bundle.name)
@@ -102,6 +105,10 @@ export default function EditProductBundle() {
   const { isEdit, data, hasAllPositionBundle = false, existingBundleNames = [] } = useLoaderData();
   const { id } = useParams();
   const fetcher = useFetcher();
+
+  // console.log("isEdit:", isEdit);
+  // console.log("data:", data);
+
 
   // Custom hooks for state management
   const {
@@ -295,7 +302,7 @@ export default function EditProductBundle() {
     try {
       const bundleData = prepareBundleData(status);
 
-      console.log("bundleData", bundleData);
+      console.log("bundleData action", bundleData);
 
       const formData = new FormData();
       formData.append("bundleData", JSON.stringify(bundleData));
