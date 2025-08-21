@@ -12,7 +12,6 @@ import {
 import {
   MenuHorizontalIcon,
   EditIcon,
-  DuplicateIcon,
   DeleteIcon,
 } from "@shopify/polaris-icons";
 import { json, useLoaderData, useFetcher } from "@remix-run/react";
@@ -133,6 +132,7 @@ export default function Dashboard() {
 
   const fetcher = useFetcher();
   const deleteVolumeFetcher = useFetcher();
+  const deleteBundleFetcher = useFetcher();
 
   const handleOpenModal = useCallback(() => setIsModalOpen(true), []);
   const handleCloseModal = useCallback(() => setIsModalOpen(false), []);
@@ -183,19 +183,48 @@ export default function Dashboard() {
     }
   }, [deleteVolumeFetcher.data]);
 
-  // Show delete confirmation modal
+  // Handle delete product bundle responses with Toast
+  useEffect(() => {
+    if (deleteBundleFetcher.data) {
+      setToastMessage(deleteBundleFetcher.data.message);
+      setToastError(!deleteBundleFetcher.data.success);
+      setShowToast(true);
+
+      if (deleteBundleFetcher.data.success) {
+        // Refresh the page data after successful deletion
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      }
+    }
+  }, [deleteBundleFetcher.data]);
+
+  // Show delete confirmation modal for volume discounts
   const showDeleteConfirmation = (volumeId, volumeName) => {
-    setItemToDelete({ id: volumeId, name: volumeName });
+    setItemToDelete({ id: volumeId, name: volumeName, type: 'volume' });
+    setIsDeleteModalOpen(true);
+  };
+
+  // Show delete confirmation modal for product bundles
+  const showBundleDeleteConfirmation = (bundleId, bundleName) => {
+    setItemToDelete({ id: bundleId, name: bundleName, type: 'bundle' });
     setIsDeleteModalOpen(true);
   };
 
   // Handle confirmed deletion
   const handleConfirmDelete = () => {
     if (itemToDelete) {
-      deleteVolumeFetcher.submit(
-        { volumeId: itemToDelete.id.toString() },
-        { method: "post", action: "/api/delete-volume-discount" },
-      );
+      if (itemToDelete.type === 'volume') {
+        deleteVolumeFetcher.submit(
+          { volumeId: itemToDelete.id.toString() },
+          { method: "post", action: "/api/delete-volume-discount" },
+        );
+      } else if (itemToDelete.type === 'bundle') {
+        deleteBundleFetcher.submit(
+          { bundleId: itemToDelete.id.toString() },
+          { method: "post", action: "/api/delete-product-bundle" },
+        );
+      }
       setIsDeleteModalOpen(false);
       setItemToDelete(null);
     }
@@ -296,6 +325,7 @@ export default function Dashboard() {
               MenuHorizontalIcon={MenuHorizontalIcon}
               // Updated delete handler to show modal
               onDeleteVolume={showDeleteConfirmation}
+              onDeleteBundle={showBundleDeleteConfirmation}
               deleteVolumeLoading={deleteVolumeFetcher.state === "submitting"}
             />
           </Layout.Section>
@@ -313,12 +343,12 @@ export default function Dashboard() {
         <Modal
           open={isDeleteModalOpen}
           onClose={handleCancelDelete}
-          title="Delete Volume Discount"
+          title={itemToDelete?.type === 'bundle' ? "Delete Product Bundle" : "Delete Volume Discount"}
           primaryAction={{
             content: "Delete",
             onAction: handleConfirmDelete,
             destructive: true,
-            loading: deleteVolumeFetcher.state === "submitting",
+            loading: (itemToDelete?.type === 'bundle' ? deleteBundleFetcher.state : deleteVolumeFetcher.state) === "submitting",
           }}
           secondaryActions={[
             {
@@ -335,9 +365,20 @@ export default function Dashboard() {
             <br />
             <p>This will permanently remove:</p>
             <ul style={{ marginLeft: "20px", marginTop: "8px" }}>
-              <li>The volume discount from your database</li>
-              <li>Associated metafield data</li>
-              <li>The Shopify automatic discount</li>
+              {itemToDelete?.type === 'bundle' ? (
+                <>
+                  <li>The product bundle from your database</li>
+                  <li>All associated bundle products</li>
+                  <li>Associated metafield data</li>
+                  <li>The Shopify automatic discount (if exists)</li>
+                </>
+              ) : (
+                <>
+                  <li>The volume discount from your database</li>
+                  <li>Associated metafield data</li>
+                  <li>The Shopify automatic discount</li>
+                </>
+              )}
             </ul>
             <br />
             <p>

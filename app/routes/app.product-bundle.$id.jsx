@@ -29,11 +29,9 @@ export async function loader({ request, params }) {
         where: { shop: shop.id },
         select: { id: true, position: true, name: true },
       });
-
       const hasAllPositionBundle = existingBundles.some(bundle => 
         bundle.position === 'all'
       );
-
       return json({ 
         success: true, 
         isEdit: false, 
@@ -54,7 +52,6 @@ export async function loader({ request, params }) {
       });
     }
   }
-
   try {
     const bundle = await prisma.bundle.findFirst({
       where: {
@@ -409,14 +406,14 @@ export default function EditProductBundle() {
               >
                 Save as draft
               </Button>
-              <Button 
+              {/* <Button 
                 variant="primary" 
                 tone="critical"
                 type="button"
                 disabled={isSubmitting}
               >
                 Delete
-              </Button>
+              </Button> */}
               <Button
                 variant="primary"
                 type="button"
@@ -430,6 +427,11 @@ export default function EditProductBundle() {
           </InlineStack>
         </Grid.Cell>
       </Grid>
+
+      <>
+      <br />
+      <br />
+      </>
     </Page>
   );
 }

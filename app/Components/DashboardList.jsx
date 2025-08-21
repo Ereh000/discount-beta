@@ -22,9 +22,9 @@ const DashboardList = ({
   DeleteIcon,
   MenuHorizontalIcon,
   onDeleteVolume,
+  onDeleteBundle,
   deleteVolumeLoading,
 }) => {
-  
   // Render bundles (unchanged for now)
   const renderBundles = () => {
     if (!bundles || bundles.length === 0) return null;
@@ -128,8 +128,8 @@ const DashboardList = ({
                       icon: DeleteIcon,
                       destructive: true,
                       onAction: () => {
-                        console.log(`Delete bundle ${bundle.id} - Coming soon!`);
                         setActivePopoverId(null);
+                        onDeleteBundle(bundle.id, bundle.bundleName);
                       },
                     },
                   ]}
@@ -268,7 +268,6 @@ const DashboardList = ({
         <LegacyCard sectioned>
           <EmptyState
             heading="Add new Bundle Blocks or Volume Discounts"
-            action={{ content: "Add Bundle Blocks", onAction: () => {} }}
             image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
           >
             <p>
