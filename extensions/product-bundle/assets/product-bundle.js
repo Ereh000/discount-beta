@@ -3,8 +3,49 @@ const shopUrl = window.shopUrl;
 let bundle = null;
 let settings = null;
 let products = [];
+let bundleTracker = null; // Add tracker instance
 
 const dom = {};
+
+// Bundle Tracker Class
+class BundleTracker {
+  constructor(shopDomain, bundleId, bundleName) {
+    this.shopDomain = shopDomain;
+    this.bundleId = bundleId;
+    this.bundleName = bundleName;
+    this.apiEndpoint = `${shopDomain}/apps/vol-api/analytics`;
+    
+    // Track impression when tracker is initialized
+    this.trackImpression();
+  }
+
+  async track(type, additionalData = {}) {
+    try {
+      await fetch(this.apiEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type,
+          bundleId: this.bundleId,
+          bundleName: this.bundleName,
+          ...additionalData
+        })
+      });
+    } catch (error) {
+      console.error('Bundle tracking error:', error);
+    }
+  }
+
+  trackImpression() {
+    this.track('IMPRESSION');
+  }
+
+  trackAddToCart(productIds) {
+    this.track('ADD_TO_CART', { productIds });
+  }
+}
 
 function hexToRgba(hex, alpha = 1) {
   // Remove leading #
@@ -26,7 +67,6 @@ function hexToRgba(hex, alpha = 1) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-
 document.addEventListener('DOMContentLoaded', async () => {
   await initializeBundle();
 });
@@ -36,6 +76,15 @@ async function initializeBundle() {
     // Load bundle data first
     await loadBundle();
     if (!bundle) return;
+
+    // Initialize tracker after bundle is loaded
+    if (bundle && bundle.id) {
+      bundleTracker = new BundleTracker(
+        shopUrl,
+        bundle.id.toString(),
+        bundle.title || bundle.name || `Bundle ${bundle.id}`
+      );
+    }
 
     // Create DOM structure after data is loaded
     createBundleDOM();
@@ -512,6 +561,8 @@ function addToCart() {
   const cartItems = querySelectorAll('.pb-product', dom.productsWrapper).map(productElement => {
     const variantId = productElement.dataset.variant;
     const quantity = +querySelector('.pb-quantity-selector', productElement)?.textContent?.replace('x', '') || 1;
+    const priceElement = querySelector('.pb-current-price', productElement);
+    const originalPrice = priceElement ? priceElement.textContent.replace(/[^\d.]/g, '') : '0';
     
     if (!variantId) return null;
     
@@ -521,7 +572,13 @@ function addToCart() {
       
     return {
       id: parseInt(numericId),
-      quantity: quantity
+      quantity: quantity,
+      properties: {
+        '_bundle_id': bundle?.id?.toString() || 'unknown',
+        '_bundle_name': bundle?.title || bundle?.name || `Bundle ${bundle?.id}`,
+        '_bundle_source': 'volume_discount',
+        '_original_price': originalPrice
+      }
     };
   }).filter(Boolean);
 
@@ -541,7 +598,15 @@ function addToCart() {
     body: JSON.stringify({ items: cartItems })
   })
     .then(response => response.ok ? response.json() : Promise.reject(response))
-    .then(() => (window.location.href = '/cart'))
+    .then(() => {
+      // Track add to cart success
+      if (bundleTracker) {
+        const productIds = products.map(p => p.id.toString());
+        bundleTracker.trackAddToCart(productIds);
+      }
+      
+      window.location.href = '/cart';
+    })
     .catch((error) => {
       console.error('Cart error:', error);
       if (dom.addToCartButton) {  

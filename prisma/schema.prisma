@@ -67,3 +67,27 @@ model VolumeDiscount {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }
+
+model BundleAnalytics {
+  id          Int      @id @default(autoincrement())
+  shopDomain  String
+  type        AnalyticType
+  bundleId    String
+  bundleName  String?
+  orderId     String?  // Only for 'order' type
+  orderNumber String?  // Only for 'order' type
+  customerId  String?  // Only for 'order' type
+  revenue     Float?   // Only for 'order' type
+  productIds  String[] // JSON array of product IDs in bundle
+  timestamp   DateTime @default(now())
+  
+  @@index([shopDomain, type])
+  @@index([bundleId])
+  @@index([timestamp])
+}
+
+enum AnalyticType {
+  IMPRESSION
+  ADD_TO_CART
+  ORDER
+}
