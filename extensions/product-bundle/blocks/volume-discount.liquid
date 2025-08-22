@@ -23,7 +23,7 @@
 {% schema %}
 {
   "name": "Volume Discount",
-  "target": "section",
+  "target": "body",
   "settings": [
     {
       "type": "text",
@@ -41,618 +41,789 @@
 }
 {% endschema %}
 
+<!-- Volume Discount App Embed with Smart Injection -->
 <script>
-  window.addEventListener('DOMContentLoaded', function () {
-    // Get shop URL from Shopify global
-    const shopUrl = `https://${window.Shopify.shop}`;
+  window.shopUrl = '{{ shop.permanent_domain | prepend: "https://" }}';
+</script>
 
-    // Get current product data - FIXED PRICE HANDLING
-    const productData = {
-      price: {{ product.price | json }}, // This gives price in cents/paise
-      priceInRupees: {{ product.price | json }} / 100, // Convert to rupees
-      id: {{ product.id | json }},
-      handle: {{ product.handle | json }},
-      variants: {{ product.variants | json }}
-    };
+<script>
+(function() {
+  'use strict';
+  
+  // Predefined triggers for volume discount injection (BEFORE product forms)
+  const VOLUME_INJECTION_TRIGGERS = [
+    // Primary targets - product forms (inject BEFORE these)
+    { selector: 'product-form', position: 'before' },
+    { selector: '.product-form', position: 'before' },
+    { selector: '[data-product-form]', position: 'before' },
+    { selector: 'form[action*="/cart/add"]', position: 'before' },
+    
+    // Secondary targets - form containers
+    { selector: '.product-form__buttons', position: 'before' },
+    { selector: '.product__buttons', position: 'before' },
+    { selector: '.product-form__quantity', position: 'before' },
+    
+    // Tertiary targets - product info containers (inject at top)
+    { selector: '.product__info-container', position: 'inside-start' },
+    { selector: '.product__info', position: 'inside-start' },
+    { selector: '.product-info', position: 'inside-start' },
+    { selector: '.product__details', position: 'inside-start' },
+    { selector: '.product-single__meta', position: 'inside-start' }
+  ];
 
-    let selectedOfferIndex = 0;
-    let currentVolumeData = null;
-    let originalQuantity = 1;
+  const shopUrl = window.shopUrl;
+  let selectedOfferIndex = 0;
+  let currentVolumeData = null;
+  let originalQuantity = 1;
+  let injected = false;
 
-    // === FIXED PRICE HELPER FUNCTIONS ===
+  // Get current product data - FIXED PRICE HANDLING
+  const productData = {
+    price: {{ product.price | json }}, // This gives price in cents/paise
+    priceInRupees: {{ product.price | json }} / 100, // Convert to rupees
+    id: {{ product.id | json }},
+    handle: {{ product.handle | json }},
+    variants: {{ product.variants | json }}
+  };
 
-    // Helper to format price properly
-    const formatPrice = (priceInCents) => {
-      const priceInRupees = priceInCents / 100;
-      return `₹${priceInRupees.toFixed(2)}`;
-    };
+  // === SMART INJECTION SYSTEM ===
+  function isProductPage() {
+    return document.body.classList.contains('template-product') ||
+           window.location.pathname.includes('/products/') ||
+           document.querySelector('form[action*="/cart/add"]') ||
+           document.querySelector('[data-product-form]') ||
+           document.querySelector('product-form');
+  }
 
-    // Helper to calculate discounted price - FIXED
-    const calculatePrice = (offer, basePriceInCents) => {
-      if (!offer || !offer.priceAmount || offer.priceAmount === "") {
-        return basePriceInCents;
+  function findBestTarget() {
+    if (!isProductPage()) {
+      console.log('Not a product page, skipping volume discount injection');
+      return null;
+    }
+
+    for (const trigger of VOLUME_INJECTION_TRIGGERS) {
+      const element = document.querySelector(trigger.selector);
+      if (element) {
+        console.log(`Found volume discount injection target: ${trigger.selector} (${trigger.position})`);
+        return { element, position: trigger.position };
       }
+    }
+    
+    console.log('No suitable volume discount injection target found');
+    return null;
+  }
 
-      const discountValue = parseFloat(offer.priceAmount);
-      
-      if (offer.priceValue === "discount_percentage") {
-        return basePriceInCents - (basePriceInCents * discountValue / 100);
-      } else if (offer.priceValue === "fixed_amount") {
-        // Convert fixed amount to cents before calculation
-        const fixedAmountInCents = discountValue * 100;
-        return Math.max(0, basePriceInCents - fixedAmountInCents);
+  function injectVolumeDiscount() {
+    if (injected) return true;
+
+    const target = findBestTarget();
+    if (!target) return false;
+
+    // Create volume discount container
+    const container = document.createElement('div');
+    container.className = 'vd-volume-bundle';
+    container.style.cssText = `
+      margin: 15px 0;
+      width: 100%;
+      clear: both;
+      display: none;
+    `;
+
+    // Create inner container
+    const innerContainer = document.createElement('div');
+    innerContainer.className = 'vs-container';
+    container.appendChild(innerContainer);
+
+    // Hidden quantity input for theme integration
+    const hiddenInput = document.createElement('input');
+    hiddenInput.className = 'quantity__input';
+    hiddenInput.type = 'hidden';
+    hiddenInput.name = 'quantity';
+    hiddenInput.setAttribute('data-cart-quantity', '0');
+    hiddenInput.setAttribute('data-min', '1');
+    hiddenInput.min = '1';
+    hiddenInput.step = '1';
+    hiddenInput.value = '1';
+    container.appendChild(hiddenInput);
+
+    // Insert based on position
+    insertElement(target.element, container, target.position);
+    
+    injected = true;
+    console.log('Volume discount container injected successfully');
+    return true;
+  }
+
+  function insertElement(targetElement, container, position) {
+    switch (position) {
+      case 'before':
+        targetElement.parentNode.insertBefore(container, targetElement);
+        break;
+      case 'after':
+        if (targetElement.nextSibling) {
+          targetElement.parentNode.insertBefore(container, targetElement.nextSibling);
+        } else {
+          targetElement.parentNode.appendChild(container);
+        }
+        break;
+      case 'inside-start':
+        targetElement.insertBefore(container, targetElement.firstChild);
+        break;
+      case 'inside-end':
+      default:
+        targetElement.appendChild(container);
+        break;
+    }
+  }
+
+  function setupRetryMechanism() {
+    let attempts = 0;
+    const maxAttempts = 15;
+    
+    const retryInterval = setInterval(() => {
+      if (injected || attempts >= maxAttempts) {
+        clearInterval(retryInterval);
+        if (!injected) {
+          console.log('Failed to inject volume discount after maximum attempts');
+        }
+        return;
       }
       
+      if (injectVolumeDiscount()) {
+        clearInterval(retryInterval);
+        initializeVolumeDiscount();
+      }
+      
+      attempts++;
+    }, 300);
+
+    // Mutation observer for dynamic content
+    if (typeof MutationObserver !== 'undefined') {
+      const observer = new MutationObserver((mutations) => {
+        if (injected) {
+          observer.disconnect();
+          return;
+        }
+        
+        for (const mutation of mutations) {
+          if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+            if (injectVolumeDiscount()) {
+              observer.disconnect();
+              initializeVolumeDiscount();
+              break;
+            }
+          }
+        }
+      });
+
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+
+      // Clean up observer after timeout
+      setTimeout(() => observer.disconnect(), 10000);
+    }
+  }
+
+  // === PRICE HELPER FUNCTIONS ===
+  
+  // Helper to format price properly
+  const formatPrice = (priceInCents) => {
+    const priceInRupees = priceInCents / 100;
+    return `₹${priceInRupees.toFixed(2)}`;
+  };
+
+  // Helper to calculate discounted price - FIXED
+  const calculatePrice = (offer, basePriceInCents) => {
+    if (!offer || !offer.priceAmount || offer.priceAmount === "") {
       return basePriceInCents;
-    };
+    }
 
-    // Helper to generate pricing for offers - FIXED
-    const generateOfferPricing = (offer) => {
-      const basePricePerItemInCents = productData.price; // Already in cents
-      const quantity = parseInt(offer.quantity) || 1;
-      const totalBasePriceInCents = basePricePerItemInCents * quantity;
-      
-      if (offer.priceAmount && offer.priceAmount !== "") {
-        const discountedPriceInCents = calculatePrice(offer, totalBasePriceInCents);
-        return {
-          price: discountedPriceInCents,
-          compareAtPrice: totalBasePriceInCents > discountedPriceInCents ? totalBasePriceInCents : null,
-          pricePerItem: discountedPriceInCents / quantity
-        };
-      }
-      
-      return { 
-        price: totalBasePriceInCents, 
-        compareAtPrice: null,
-        pricePerItem: basePricePerItemInCents
-      };
-    };
-
-    // === THEME INTEGRATION FUNCTIONS (unchanged) ===
-
-    const findQuantityElements = () => {
-      const quantityElements = {
-        input: null,
-        increaseBtn: null,
-        decreaseBtn: null,
-        form: null
-      };
-
-      const quantitySelectors = [
-        'input[name="quantity"]',
-        '.quantity__input',
-        '.product-form__quantity input',
-        '.quantity-selector input[type="number"]',
-        'input.qty'
-      ];
-
-      for (const selector of quantitySelectors) {
-        quantityElements.input = document.querySelector(selector);
-        if (quantityElements.input) break;
-      }
-
-      if (quantityElements.input) {
-        quantityElements.form = quantityElements.input.closest('form');
-        
-        const container = quantityElements.input.closest('.quantity') || 
-                         quantityElements.input.closest('.product-form__quantity') ||
-                         quantityElements.input.parentElement;
-        
-        if (container) {
-          quantityElements.increaseBtn = container.querySelector('[data-quantity="plus"], .quantity__button[data-quantity="plus"], .btn-plus');
-          quantityElements.decreaseBtn = container.querySelector('[data-quantity="minus"], .quantity__button[data-quantity="minus"], .btn-minus');
-        }
-      }
-
-      return quantityElements;
-    };
-
-    const updateThemeQuantity = (newQuantity) => {
-      const elements = findQuantityElements();
-      
-      if (!elements.input) {
-        console.warn('Quantity input not found in theme');
-        return;
-      }
-
-      const quantity = parseInt(newQuantity) || 1;
-      elements.input.value = quantity;
-      
-      const changeEvent = new Event('change', { bubbles: true });
-      const inputEvent = new Event('input', { bubbles: true });
-      
-      elements.input.dispatchEvent(inputEvent);
-      elements.input.dispatchEvent(changeEvent);
-
-      if (typeof window.ProductForm !== 'undefined') {
-        const customEvent = new CustomEvent('quantityChanged', {
-          detail: { quantity: quantity }
-        });
-        elements.input.dispatchEvent(customEvent);
-      }
-
-      console.log(`Updated theme quantity to: ${quantity}`);
-    };
-
-    const getSelectedOfferQuantity = () => {
-      if (!currentVolumeData?.settings?.offerSettings?.offers) return 1;
-      
-      const selectedOffer = currentVolumeData.settings.offerSettings.offers[selectedOfferIndex];
-      return parseInt(selectedOffer?.quantity) || 1;
-    };
-
-    const setupAddToCartIntegration = () => {
-      const elements = findQuantityElements();
-      
-      if (!elements.form) {
-        console.warn('Product form not found for add to cart integration');
-        return;
-      }
-
-      const addToCartBtn = elements.form.querySelector('[name="add"], .btn.product-form__cart-submit, button[type="submit"]');
-      
-      if (!addToCartBtn) {
-        console.warn('Add to cart button not found');
-        return;
-      }
-
-      elements.form.addEventListener('submit', function(event) {
-        const selectedQuantity = getSelectedOfferQuantity();
-        updateThemeQuantity(selectedQuantity);
-        
-        console.log(`Adding to cart with volume discount quantity: ${selectedQuantity}`);
-      });
-
-      addToCartBtn.addEventListener('click', function(event) {
-        const selectedQuantity = getSelectedOfferQuantity();
-        updateThemeQuantity(selectedQuantity);
-      });
-    };
-
-    const handleThemeQuantityChange = () => {
-      const elements = findQuantityElements();
-      
-      if (!elements.input) return;
-
-      elements.input.addEventListener('input', function(event) {
-        if (!event.isTrusted) return;
-        
-        const currentQuantity = parseInt(event.target.value) || 1;
-        
-        if (currentVolumeData?.settings?.offerSettings?.offers) {
-          const matchingOfferIndex = currentVolumeData.settings.offerSettings.offers.findIndex(
-            offer => parseInt(offer.quantity) === currentQuantity
-          );
-          
-          if (matchingOfferIndex >= 0 && matchingOfferIndex !== selectedOfferIndex) {
-            selectOffer(matchingOfferIndex);
-          }
-        }
-      });
-
-      if (elements.increaseBtn) {
-        elements.increaseBtn.addEventListener('click', function() {
-          setTimeout(() => {
-            const newQuantity = parseInt(elements.input.value) || 1;
-            checkOfferMatch(newQuantity);
-          }, 100);
-        });
-      }
-
-      if (elements.decreaseBtn) {
-        elements.decreaseBtn.addEventListener('click', function() {
-          setTimeout(() => {
-            const newQuantity = parseInt(elements.input.value) || 1;
-            checkOfferMatch(newQuantity);
-          }, 100);
-        });
-      }
-    };
-
-    const checkOfferMatch = (quantity) => {
-      if (!currentVolumeData?.settings?.offerSettings?.offers) return;
-      
-      const matchingOfferIndex = currentVolumeData.settings.offerSettings.offers.findIndex(
-        offer => parseInt(offer.quantity) === quantity
-      );
-      
-      if (matchingOfferIndex >= 0 && matchingOfferIndex !== selectedOfferIndex) {
-        selectOffer(matchingOfferIndex);
-      }
-    };
-
-    // === OTHER HELPER FUNCTIONS ===
+    const discountValue = parseFloat(offer.priceAmount);
     
-    const rgbaToString = (color) => {
-      if (
-        !color ||
-        typeof color.red !== 'number' ||
-        typeof color.green !== 'number' ||
-        typeof color.blue !== 'number' ||
-        typeof color.alpha !== 'number'
-      ) {
-        return 'rgba(0, 0, 0, 1)';
-      }
-      return `rgba(${color.red}, ${color.green}, ${color.blue}, ${color.alpha})`;
-    };
-
-    const getFontWeight = (fontStyle) => {
-      switch (fontStyle) {
-        case 'Lighter':
-          return '300';
-        case 'Regular':
-          return '400';
-        case 'Bold':
-          return '700';
-        case 'Bolder':
-          return '900';
-        default:
-          return '400';
-      }
-    };
-
-    // === MAIN FUNCTIONS ===
+    if (offer.priceValue === "discount_percentage") {
+      return basePriceInCents - (basePriceInCents * discountValue / 100);
+    } else if (offer.priceValue === "fixed_amount") {
+      // Convert fixed amount to cents before calculation
+      const fixedAmountInCents = discountValue * 100;
+      return Math.max(0, basePriceInCents - fixedAmountInCents);
+    }
     
-    const selectOffer = (newSelectedIndex) => {
-      console.log('Selected offer index:', newSelectedIndex);
-      
-      if (newSelectedIndex === selectedOfferIndex) return;
-      
-      selectedOfferIndex = newSelectedIndex;
-      
-      const selectedOffer = currentVolumeData?.settings?.offerSettings?.offers?.[selectedOfferIndex];
-      const offerQuantity = parseInt(selectedOffer?.quantity) || 1;
-      
-      updateThemeQuantity(offerQuantity);
-      
-      if (currentVolumeData) {
-        renderVolumeDiscount(currentVolumeData);
-      }
+    return basePriceInCents;
+  };
 
-      const customEvent = new CustomEvent('volumeDiscountOfferSelected', {
-        detail: {
-          offerIndex: newSelectedIndex,
-          offer: selectedOffer,
-          quantity: offerQuantity
+  // Helper to generate pricing for offers - FIXED
+  const generateOfferPricing = (offer) => {
+    const basePricePerItemInCents = productData.price; // Already in cents
+    const quantity = parseInt(offer.quantity) || 1;
+    const totalBasePriceInCents = basePricePerItemInCents * quantity;
+    
+    if (offer.priceAmount && offer.priceAmount !== "") {
+      const discountedPriceInCents = calculatePrice(offer, totalBasePriceInCents);
+      return {
+        price: discountedPriceInCents,
+        compareAtPrice: totalBasePriceInCents > discountedPriceInCents ? totalBasePriceInCents : null,
+        pricePerItem: discountedPriceInCents / quantity
+      };
+    }
+    
+    return { 
+      price: totalBasePriceInCents, 
+      compareAtPrice: null,
+      pricePerItem: basePricePerItemInCents
+    };
+  };
+
+  // === THEME INTEGRATION FUNCTIONS ===
+
+  const findQuantityElements = () => {
+    const quantityElements = {
+      input: null,
+      increaseBtn: null,
+      decreaseBtn: null,
+      form: null
+    };
+
+    const quantitySelectors = [
+      'input[name="quantity"]',
+      '.quantity__input',
+      '.product-form__quantity input',
+      '.quantity-selector input[type="number"]',
+      'input.qty'
+    ];
+
+    for (const selector of quantitySelectors) {
+      quantityElements.input = document.querySelector(selector);
+      if (quantityElements.input) break;
+    }
+
+    if (quantityElements.input) {
+      quantityElements.form = quantityElements.input.closest('form');
+      
+      const container = quantityElements.input.closest('.quantity') || 
+                       quantityElements.input.closest('.product-form__quantity') ||
+                       quantityElements.input.parentElement;
+      
+      if (container) {
+        quantityElements.increaseBtn = container.querySelector('[data-quantity="plus"], .quantity__button[data-quantity="plus"], .btn-plus');
+        quantityElements.decreaseBtn = container.querySelector('[data-quantity="minus"], .quantity__button[data-quantity="minus"], .btn-minus');
+      }
+    }
+
+    return quantityElements;
+  };
+
+  const updateThemeQuantity = (newQuantity) => {
+    const elements = findQuantityElements();
+    
+    if (!elements.input) {
+      console.warn('Quantity input not found in theme');
+      return;
+    }
+
+    const quantity = parseInt(newQuantity) || 1;
+    elements.input.value = quantity;
+    
+    const changeEvent = new Event('change', { bubbles: true });
+    const inputEvent = new Event('input', { bubbles: true });
+    
+    elements.input.dispatchEvent(inputEvent);
+    elements.input.dispatchEvent(changeEvent);
+
+    if (typeof window.ProductForm !== 'undefined') {
+      const customEvent = new CustomEvent('quantityChanged', {
+        detail: { quantity: quantity }
+      });
+      elements.input.dispatchEvent(customEvent);
+    }
+
+    console.log(`Updated theme quantity to: ${quantity}`);
+  };
+
+  const getSelectedOfferQuantity = () => {
+    if (!currentVolumeData?.settings?.offerSettings?.offers) return 1;
+    
+    const selectedOffer = currentVolumeData.settings.offerSettings.offers[selectedOfferIndex];
+    return parseInt(selectedOffer?.quantity) || 1;
+  };
+
+  const setupAddToCartIntegration = () => {
+    const elements = findQuantityElements();
+    
+    if (!elements.form) {
+      console.warn('Product form not found for add to cart integration');
+      return;
+    }
+
+    const addToCartBtn = elements.form.querySelector('[name="add"], .btn.product-form__cart-submit, button[type="submit"]');
+    
+    if (!addToCartBtn) {
+      console.warn('Add to cart button not found');
+      return;
+    }
+
+    elements.form.addEventListener('submit', function(event) {
+      const selectedQuantity = getSelectedOfferQuantity();
+      updateThemeQuantity(selectedQuantity);
+      
+      console.log(`Adding to cart with volume discount quantity: ${selectedQuantity}`);
+    });
+
+    addToCartBtn.addEventListener('click', function(event) {
+      const selectedQuantity = getSelectedOfferQuantity();
+      updateThemeQuantity(selectedQuantity);
+    });
+  };
+
+  const handleThemeQuantityChange = () => {
+    const elements = findQuantityElements();
+    
+    if (!elements.input) return;
+
+    elements.input.addEventListener('input', function(event) {
+      if (!event.isTrusted) return;
+      
+      const currentQuantity = parseInt(event.target.value) || 1;
+      
+      if (currentVolumeData?.settings?.offerSettings?.offers) {
+        const matchingOfferIndex = currentVolumeData.settings.offerSettings.offers.findIndex(
+          offer => parseInt(offer.quantity) === currentQuantity
+        );
+        
+        if (matchingOfferIndex >= 0 && matchingOfferIndex !== selectedOfferIndex) {
+          selectOffer(matchingOfferIndex);
         }
+      }
+    });
+
+    if (elements.increaseBtn) {
+      elements.increaseBtn.addEventListener('click', function() {
+        setTimeout(() => {
+          const newQuantity = parseInt(elements.input.value) || 1;
+          checkOfferMatch(newQuantity);
+        }, 100);
       });
-      document.dispatchEvent(customEvent);
-    };
+    }
 
-    const loadVolumeDiscount = () => {
-      fetch(`${shopUrl}/apps/vol-api/volume-discount`)
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then((data) => {
-          console.log('Fetched volume discount data:', data);
-          console.log('Product price in cents:', productData.price);
-          console.log('Product price in rupees:', productData.priceInRupees);
-
-          if (!data.success || !data.data || !Array.isArray(data.data) || data.data.length === 0) {
-            console.warn('No volume discount data found.');
-            return hideVolumeBlock();
-          }
-
-          const publishedVolumes = data.data.filter(volume => volume.status === 'published');
-          const volumeData = publishedVolumes.length > 0 ? publishedVolumes[0] : data.data;
-
-          if (!volumeData || !volumeData.settings) {
-            console.warn('Volume discount settings not found.');
-            return hideVolumeBlock();
-          }
-
-          currentVolumeData = volumeData;
-          selectedOfferIndex = volumeData.settings.offerSettings?.selectedOfferIndex || 0;
-          
-          renderVolumeDiscount(volumeData);
-          
-          setupAddToCartIntegration();
-          handleThemeQuantityChange();
-          
-          const initialOffer = volumeData.settings.offerSettings?.offers?.[selectedOfferIndex];
-          const initialQuantity = parseInt(initialOffer?.quantity) || 1;
-          updateThemeQuantity(initialQuantity);
-        })
-        .catch((error) => {
-          console.error('Error fetching volume discount settings:', error);
-          hideVolumeBlock();
-        });
-    };
-
-    const hideVolumeBlock = () => {
-      const vdBlock = document.querySelector('.vd-volume-bundle');
-      if (vdBlock) vdBlock.style.display = 'none';
-    };
-
-    const showVolumeBlock = () => {
-      const vdBlock = document.querySelector('.vd-volume-bundle');
-      if (vdBlock) vdBlock.style.display = 'block';
-    };
-
-    const renderVolumeDiscount = (volumeData) => {
-      const settings = volumeData.settings;
-      const { bundleSettings, offerSettings, designSettings, advancedSettings } = settings;
-
-      const vdContainer = document.querySelector('.vd-volume-bundle .vs-container');
-      if (!vdContainer) {
-        console.error('Volume discount container not found.');
-        return;
-      }
-
-      vdContainer.innerHTML = '';
-
-      if (bundleSettings?.visibilitySettings?.visibility === 'specific_products') {
-        // Product-specific logic would go here
-      }
-
-      renderHeader(vdContainer, bundleSettings, designSettings);
-      renderOffers(vdContainer, offerSettings, bundleSettings, designSettings, advancedSettings);
-
-      showVolumeBlock();
-    };
-
-    const renderHeader = (container, bundleSettings, designSettings) => {
-      const headerDiv = document.createElement('div');
-      headerDiv.style.cssText = `
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-        margin-bottom: 16px;
-      `;
-
-      const headerTextDiv = document.createElement('div');
-      headerTextDiv.className = 'preview-header';
-      headerTextDiv.style.cssText = `
-        text-align: ${bundleSettings?.headerSettings?.alignment || 'center'};
-        color: ${rgbaToString(designSettings?.textColors?.header)};
-        font-size: ${designSettings?.typographySettings?.header?.size || 16}px;
-        font-weight: ${getFontWeight(designSettings?.typographySettings?.header?.fontStyle)};
-        white-space: nowrap;
-        padding: 0 16px;
-      `;
-      headerTextDiv.textContent = bundleSettings?.headerSettings?.headerText || 'Choose your offer';
-
-      if (bundleSettings?.headerSettings?.headerLine) {
-        const lineThickness = bundleSettings?.headerSettings?.lineThickness || 2;
-        const lineColor = rgbaToString(designSettings?.backgroundColors?.border);
-        
-        const leftLine = document.createElement('span');
-        leftLine.style.cssText = `
-          flex: 1;
-          height: ${lineThickness}px;
-          background: ${lineColor};
-        `;
-        
-        const rightLine = document.createElement('span');
-        rightLine.style.cssText = `
-          flex: 1;
-          height: ${lineThickness}px;
-          background: ${lineColor};
-        `;
-
-        headerDiv.appendChild(leftLine);
-        headerDiv.appendChild(headerTextDiv);
-        headerDiv.appendChild(rightLine);
-      } else {
-        headerDiv.appendChild(headerTextDiv);
-      }
-
-      container.appendChild(headerDiv);
-    };
-
-    const renderOffers = (container, offerSettings, bundleSettings, designSettings, advancedSettings) => {
-      if (!offerSettings?.offers || !Array.isArray(offerSettings.offers)) {
-        console.warn('No offers found in volume discount settings.');
-        return;
-      }
-
-      const offersContainer = document.createElement('div');
-      offersContainer.className = 'offers-container';
-
-      offerSettings.offers.forEach((offer, index) => {
-        const isSelected = index === selectedOfferIndex;
-        const offerItem = createOfferItem(offer, index, isSelected, bundleSettings, designSettings, advancedSettings);
-        offersContainer.appendChild(offerItem);
+    if (elements.decreaseBtn) {
+      elements.decreaseBtn.addEventListener('click', function() {
+        setTimeout(() => {
+          const newQuantity = parseInt(elements.input.value) || 1;
+          checkOfferMatch(newQuantity);
+        }, 100);
       });
+    }
+  };
 
-      container.appendChild(offersContainer);
-    };
+  const checkOfferMatch = (quantity) => {
+    if (!currentVolumeData?.settings?.offerSettings?.offers) return;
+    
+    const matchingOfferIndex = currentVolumeData.settings.offerSettings.offers.findIndex(
+      offer => parseInt(offer.quantity) === quantity
+    );
+    
+    if (matchingOfferIndex >= 0 && matchingOfferIndex !== selectedOfferIndex) {
+      selectOffer(matchingOfferIndex);
+    }
+  };
 
-    const createOfferItem = (offer, index, isSelected, bundleSettings, designSettings, advancedSettings) => {
-      const offerItem = document.createElement('div');
-      offerItem.className = 'offer-item';
-      offerItem.style.cssText = `
-        background-color: ${isSelected 
-          ? rgbaToString(designSettings?.backgroundColors?.selectedBundle)
-          : rgbaToString(designSettings?.backgroundColors?.bundle)};
-        border-radius: ${bundleSettings?.shapeSettings?.blockRadius || 12}px;
-        border: ${bundleSettings?.shapeSettings?.blockThickness || 2}px solid ${
-          isSelected
-            ? rgbaToString(designSettings?.backgroundColors?.borderSelectedBundle)
-            : rgbaToString(designSettings?.backgroundColors?.border)
-        };
-        padding: 16px;
-        margin-bottom: 12px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        position: relative;
-        cursor: pointer;
-        transition: all 0.2s ease;
-      `;
+  // === OTHER HELPER FUNCTIONS ===
+  
+  const rgbaToString = (color) => {
+    if (
+      !color ||
+      typeof color.red !== 'number' ||
+      typeof color.green !== 'number' ||
+      typeof color.blue !== 'number' ||
+      typeof color.alpha !== 'number'
+    ) {
+      return 'rgba(0, 0, 0, 1)';
+    }
+    return `rgba(${color.red}, ${color.green}, ${color.blue}, ${color.alpha})`;
+  };
 
-      offerItem.addEventListener('click', () => selectOffer(index));
+  const getFontWeight = (fontStyle) => {
+    switch (fontStyle) {
+      case 'Lighter':
+        return '300';
+      case 'Regular':
+        return '400';
+      case 'Bold':
+        return '700';
+      case 'Bolder':
+        return '900';
+      default:
+        return '400';
+    }
+  };
 
-      const leftContent = document.createElement('div');
-      leftContent.style.cssText = 'display: flex; align-items: center;';
+  // === MAIN FUNCTIONS ===
+  
+  const selectOffer = (newSelectedIndex) => {
+    console.log('Selected offer index:', newSelectedIndex);
+    
+    if (newSelectedIndex === selectedOfferIndex) return;
+    
+    selectedOfferIndex = newSelectedIndex;
+    
+    const selectedOffer = currentVolumeData?.settings?.offerSettings?.offers?.[selectedOfferIndex];
+    const offerQuantity = parseInt(selectedOffer?.quantity) || 1;
+    
+    updateThemeQuantity(offerQuantity);
+    
+    if (currentVolumeData) {
+      renderVolumeDiscount(currentVolumeData);
+    }
 
-      const showRadioButtons = bundleSettings?.checkmarkSettings?.checkmarkVisibility === "show" || 
-                             bundleSettings?.checkmarkSettings?.checkmarkVisibility === "showRadio";
+    const customEvent = new CustomEvent('volumeDiscountOfferSelected', {
+      detail: {
+        offerIndex: newSelectedIndex,
+        offer: selectedOffer,
+        quantity: offerQuantity
+      }
+    });
+    document.dispatchEvent(customEvent);
+  };
+
+  const loadVolumeDiscount = () => {
+    fetch(`${shopUrl}/apps/vol-api/volume-discount`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then((data) => {
+        console.log('Fetched volume discount data:', data);
+        console.log('Product price in cents:', productData.price);
+        console.log('Product price in rupees:', productData.priceInRupees);
+
+        if (!data.success || !data.data || !Array.isArray(data.data) || data.data.length === 0) {
+          console.warn('No volume discount data found.');
+          return hideVolumeBlock();
+        }
+
+        const publishedVolumes = data.data.filter(volume => volume.status === 'published');
+        const volumeData = publishedVolumes.length > 0 ? publishedVolumes[0] : data.data;
+
+        if (!volumeData || !volumeData.settings) {
+          console.warn('Volume discount settings not found.');
+          return hideVolumeBlock();
+        }
+
+        currentVolumeData = volumeData;
+        selectedOfferIndex = volumeData.settings.offerSettings?.selectedOfferIndex || 0;
+        
+        renderVolumeDiscount(volumeData);
+        
+        setupAddToCartIntegration();
+        handleThemeQuantityChange();
+        
+        const initialOffer = volumeData.settings.offerSettings?.offers?.[selectedOfferIndex];
+        const initialQuantity = parseInt(initialOffer?.quantity) || 1;
+        updateThemeQuantity(initialQuantity);
+      })
+      .catch((error) => {
+        console.error('Error fetching volume discount settings:', error);
+        hideVolumeBlock();
+      });
+  };
+
+  const hideVolumeBlock = () => {
+    const vdBlock = document.querySelector('.vd-volume-bundle');
+    if (vdBlock) vdBlock.style.display = 'none';
+  };
+
+  const showVolumeBlock = () => {
+    const vdBlock = document.querySelector('.vd-volume-bundle');
+    if (vdBlock) vdBlock.style.display = 'block';
+  };
+
+  const renderVolumeDiscount = (volumeData) => {
+    const settings = volumeData.settings;
+    const { bundleSettings, offerSettings, designSettings, advancedSettings } = settings;
+
+    const vdContainer = document.querySelector('.vd-volume-bundle .vs-container');
+    if (!vdContainer) {
+      console.error('Volume discount container not found.');
+      return;
+    }
+
+    vdContainer.innerHTML = '';
+
+    if (bundleSettings?.visibilitySettings?.visibility === 'specific_products') {
+      // Product-specific logic would go here
+    }
+
+    renderHeader(vdContainer, bundleSettings, designSettings);
+    renderOffers(vdContainer, offerSettings, bundleSettings, designSettings, advancedSettings);
+
+    showVolumeBlock();
+  };
+
+  const renderHeader = (container, bundleSettings, designSettings) => {
+    const headerDiv = document.createElement('div');
+    headerDiv.style.cssText = `
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    `;
+
+    const headerTextDiv = document.createElement('div');
+    headerTextDiv.className = 'preview-header';
+    headerTextDiv.style.cssText = `
+      text-align: ${bundleSettings?.headerSettings?.alignment || 'center'};
+      color: ${rgbaToString(designSettings?.textColors?.header)};
+      font-size: ${designSettings?.typographySettings?.header?.size || 16}px;
+      font-weight: ${getFontWeight(designSettings?.typographySettings?.header?.fontStyle)};
+      white-space: nowrap;
+      padding: 0 16px;
+    `;
+    headerTextDiv.textContent = bundleSettings?.headerSettings?.headerText || 'Choose your offer';
+
+    if (bundleSettings?.headerSettings?.headerLine) {
+      const lineThickness = bundleSettings?.headerSettings?.lineThickness || 2;
+      const lineColor = rgbaToString(designSettings?.backgroundColors?.border);
       
-      if (showRadioButtons) {
-        const checkmark = createCheckmark(isSelected, designSettings);
-        leftContent.appendChild(checkmark);
-      }
+      const leftLine = document.createElement('span');
+      leftLine.style.cssText = `
+        flex: 1;
+        height: ${lineThickness}px;
+        background: ${lineColor};
+      `;
+      
+      const rightLine = document.createElement('span');
+      rightLine.style.cssText = `
+        flex: 1;
+        height: ${lineThickness}px;
+        background: ${lineColor};
+      `;
 
-      const textContent = createTextContent(offer, designSettings);
-      leftContent.appendChild(textContent);
+      headerDiv.appendChild(leftLine);
+      headerDiv.appendChild(headerTextDiv);
+      headerDiv.appendChild(rightLine);
+    } else {
+      headerDiv.appendChild(headerTextDiv);
+    }
 
-      offerItem.appendChild(leftContent);
+    container.appendChild(headerDiv);
+  };
 
-      const rightContent = createPriceContent(offer, designSettings, advancedSettings);
-      offerItem.appendChild(rightContent);
+  const renderOffers = (container, offerSettings, bundleSettings, designSettings, advancedSettings) => {
+    if (!offerSettings?.offers || !Array.isArray(offerSettings.offers)) {
+      console.warn('No offers found in volume discount settings.');
+      return;
+    }
 
-      if (offer?.highlight && offer?.highlightSettings?.text) {
-        const highlightTag = createHighlightTag(offer, designSettings, bundleSettings);
-        offerItem.appendChild(highlightTag);
-      }
+    const offersContainer = document.createElement('div');
+    offersContainer.className = 'offers-container';
 
-      return offerItem;
-    };
+    offerSettings.offers.forEach((offer, index) => {
+      const isSelected = index === selectedOfferIndex;
+      const offerItem = createOfferItem(offer, index, isSelected, bundleSettings, designSettings, advancedSettings);
+      offersContainer.appendChild(offerItem);
+    });
 
-    const createCheckmark = (isSelected, designSettings) => {
-      const checkmarkDiv = document.createElement('div');
-      checkmarkDiv.style.cssText = `
-        width: 20px;
-        height: 20px;
+    container.appendChild(offersContainer);
+  };
+
+  const createOfferItem = (offer, index, isSelected, bundleSettings, designSettings, advancedSettings) => {
+    const offerItem = document.createElement('div');
+    offerItem.className = 'offer-item';
+    offerItem.style.cssText = `
+      background-color: ${isSelected 
+        ? rgbaToString(designSettings?.backgroundColors?.selectedBundle)
+        : rgbaToString(designSettings?.backgroundColors?.bundle)};
+      border-radius: ${bundleSettings?.shapeSettings?.blockRadius || 12}px;
+      border: ${bundleSettings?.shapeSettings?.blockThickness || 2}px solid ${
+        isSelected
+          ? rgbaToString(designSettings?.backgroundColors?.borderSelectedBundle)
+          : rgbaToString(designSettings?.backgroundColors?.border)
+      };
+      padding: 16px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: relative;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    `;
+
+    offerItem.addEventListener('click', () => selectOffer(index));
+
+    const leftContent = document.createElement('div');
+    leftContent.style.cssText = 'display: flex; align-items: center;';
+
+    const showRadioButtons = bundleSettings?.checkmarkSettings?.checkmarkVisibility === "show" || 
+                           bundleSettings?.checkmarkSettings?.checkmarkVisibility === "showRadio";
+    
+    if (showRadioButtons) {
+      const checkmark = createCheckmark(isSelected, designSettings);
+      leftContent.appendChild(checkmark);
+    }
+
+    const textContent = createTextContent(offer, designSettings);
+    leftContent.appendChild(textContent);
+
+    offerItem.appendChild(leftContent);
+
+    const rightContent = createPriceContent(offer, designSettings, advancedSettings);
+    offerItem.appendChild(rightContent);
+
+    if (offer?.highlight && offer?.highlightSettings?.text) {
+      const highlightTag = createHighlightTag(offer, designSettings, bundleSettings);
+      offerItem.appendChild(highlightTag);
+    }
+
+    return offerItem;
+  };
+
+  const createCheckmark = (isSelected, designSettings) => {
+    const checkmarkDiv = document.createElement('div');
+    checkmarkDiv.style.cssText = `
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid ${rgbaToString(designSettings?.backgroundColors?.border)};
+      margin-right: 12px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: ${isSelected ? rgbaToString(designSettings?.backgroundColors?.checkmark) : 'transparent'};
+    `;
+
+    if (isSelected) {
+      const innerCheckmark = document.createElement('div');
+      innerCheckmark.style.cssText = `
+        width: 12px;
+        height: 12px;
         border-radius: 50%;
-        border: 2px solid ${rgbaToString(designSettings?.backgroundColors?.border)};
-        margin-right: 12px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        background-color: ${isSelected ? rgbaToString(designSettings?.backgroundColors?.checkmark) : 'transparent'};
+        background-color: ${rgbaToString(designSettings?.textColors?.highlight) || '#5C3D99'};
       `;
+      checkmarkDiv.appendChild(innerCheckmark);
+    }
 
-      if (isSelected) {
-        const innerCheckmark = document.createElement('div');
-        innerCheckmark.style.cssText = `
-          width: 12px;
-          height: 12px;
-          border-radius: 50%;
-          background-color: ${rgbaToString(designSettings?.textColors?.highlight) || '#5C3D99'};
-        `;
-        checkmarkDiv.appendChild(innerCheckmark);
-      }
+    return checkmarkDiv;
+  };
 
-      return checkmarkDiv;
-    };
+  const createTextContent = (offer, designSettings) => {
+    const textContent = document.createElement('div');
 
-    const createTextContent = (offer, designSettings) => {
-      const textContent = document.createElement('div');
+    const titleDiv = document.createElement('div');
+    titleDiv.style.cssText = `
+      color: ${rgbaToString(designSettings?.textColors?.title)};
+      font-size: ${designSettings?.typographySettings?.titlePrice?.size || 16}px;
+      font-weight: ${getFontWeight(designSettings?.typographySettings?.titlePrice?.fontStyle)};
+      margin-bottom: 4px;
+    `;
+    titleDiv.textContent = offer?.title || '';
 
-      const titleDiv = document.createElement('div');
-      titleDiv.style.cssText = `
-        color: ${rgbaToString(designSettings?.textColors?.title)};
-        font-size: ${designSettings?.typographySettings?.titlePrice?.size || 16}px;
-        font-weight: ${getFontWeight(designSettings?.typographySettings?.titlePrice?.fontStyle)};
-        margin-bottom: 4px;
-      `;
-      titleDiv.textContent = offer?.title || '';
+    const subtitleDiv = document.createElement('div');
+    subtitleDiv.style.cssText = `
+      color: ${rgbaToString(designSettings?.textColors?.subtitle)};
+      font-size: ${designSettings?.typographySettings?.subtitleComparedPrice?.size || 14}px;
+      font-weight: ${getFontWeight(designSettings?.typographySettings?.subtitleComparedPrice?.fontStyle)};
+    `;
+    subtitleDiv.textContent = offer?.subtitle || '';
 
-      const subtitleDiv = document.createElement('div');
-      subtitleDiv.style.cssText = `
+    textContent.appendChild(titleDiv);
+    textContent.appendChild(subtitleDiv);
+
+    return textContent;
+  };
+
+  // FIXED: Price content creation with proper price handling
+  const createPriceContent = (offer, designSettings, advancedSettings) => {
+    const rightContent = document.createElement('div');
+    rightContent.style.textAlign = 'right';
+
+    const pricing = generateOfferPricing(offer);
+
+    // Show price per item if enabled
+    if (advancedSettings?.pricing?.showPricesPerItem) {
+      const pricePerItemDiv = document.createElement('div');
+      pricePerItemDiv.style.cssText = `
         color: ${rgbaToString(designSettings?.textColors?.subtitle)};
+        font-size: ${parseInt(designSettings?.typographySettings?.subtitleComparedPrice?.size || 14) - 2}px;
+        margin-bottom: 2px;
+      `;
+      pricePerItemDiv.textContent = `${formatPrice(pricing.pricePerItem)} each`;
+      rightContent.appendChild(pricePerItemDiv);
+    }
+    
+    // Main price
+    const priceDiv = document.createElement('div');
+    priceDiv.style.cssText = `
+      color: ${rgbaToString(designSettings?.pricingColors?.price)};
+      font-size: ${designSettings?.typographySettings?.titlePrice?.size || 16}px;
+      font-weight: ${getFontWeight(designSettings?.typographySettings?.titlePrice?.fontStyle)};
+    `;
+    priceDiv.textContent = formatPrice(pricing.price);
+    rightContent.appendChild(priceDiv);
+
+    // Compare at price if enabled and available
+    if (pricing.compareAtPrice && advancedSettings?.pricing?.showCompareAtPrice) {
+      const compareAtPriceDiv = document.createElement('div');
+      compareAtPriceDiv.style.cssText = `
+        color: ${rgbaToString(designSettings?.pricingColors?.comparedPrice)};
         font-size: ${designSettings?.typographySettings?.subtitleComparedPrice?.size || 14}px;
         font-weight: ${getFontWeight(designSettings?.typographySettings?.subtitleComparedPrice?.fontStyle)};
+        text-decoration: line-through;
       `;
-      subtitleDiv.textContent = offer?.subtitle || '';
+      compareAtPriceDiv.textContent = formatPrice(pricing.compareAtPrice);
+      rightContent.appendChild(compareAtPriceDiv);
+    }
 
-      textContent.appendChild(titleDiv);
-      textContent.appendChild(subtitleDiv);
+    return rightContent;
+  };
 
-      return textContent;
-    };
+  const createHighlightTag = (offer, designSettings, bundleSettings) => {
+    const highlightTag = document.createElement('div');
+    const shape = offer?.highlightSettings?.shape || 'rounded';
+    const style = offer?.highlightSettings?.style || 'pill';
+    
+    let borderRadius = '12px';
+    if (style === 'rectangle') {
+      borderRadius = '4px';
+    } else if (shape === 'square') {
+      borderRadius = '2px';
+    }
 
-    // FIXED: Price content creation with proper price handling
-    const createPriceContent = (offer, designSettings, advancedSettings) => {
-      const rightContent = document.createElement('div');
-      rightContent.style.textAlign = 'right';
+    highlightTag.style.cssText = `
+      position: absolute;
+      top: -10px;
+      right: 20px;
+      background-color: ${rgbaToString(designSettings?.backgroundColors?.highlight)};
+      color: ${rgbaToString(designSettings?.textColors?.highlight)};
+      padding: 4px 8px;
+      border-radius: ${borderRadius};
+      font-size: ${designSettings?.typographySettings?.tagHighlight?.size || 12}px;
+      font-weight: ${getFontWeight(designSettings?.typographySettings?.tagHighlight?.fontStyle)};
+      z-index: 1;
+      ${offer?.highlightSettings?.blinking ? 'animation: vd-blink 1s linear infinite;' : ''}
+    `;
+    highlightTag.textContent = offer?.highlightSettings?.text || '';
 
-      const pricing = generateOfferPricing(offer);
+    return highlightTag;
+  };
 
-      // Show price per item if enabled
-      if (advancedSettings?.pricing?.showPricesPerItem) {
-        const pricePerItemDiv = document.createElement('div');
-        pricePerItemDiv.style.cssText = `
-          color: ${rgbaToString(designSettings?.textColors?.subtitle)};
-          font-size: ${parseInt(designSettings?.typographySettings?.subtitleComparedPrice?.size || 14) - 2}px;
-          margin-bottom: 2px;
-        `;
-        pricePerItemDiv.textContent = `${formatPrice(pricing.pricePerItem)} each`;
-        rightContent.appendChild(pricePerItemDiv);
-      }
-      
-      // Main price
-      const priceDiv = document.createElement('div');
-      priceDiv.style.cssText = `
-        color: ${rgbaToString(designSettings?.pricingColors?.price)};
-        font-size: ${designSettings?.typographySettings?.titlePrice?.size || 16}px;
-        font-weight: ${getFontWeight(designSettings?.typographySettings?.titlePrice?.fontStyle)};
-      `;
-      priceDiv.textContent = formatPrice(pricing.price);
-      rightContent.appendChild(priceDiv);
-
-      // Compare at price if enabled and available
-      if (pricing.compareAtPrice && advancedSettings?.pricing?.showCompareAtPrice) {
-        const compareAtPriceDiv = document.createElement('div');
-        compareAtPriceDiv.style.cssText = `
-          color: ${rgbaToString(designSettings?.pricingColors?.comparedPrice)};
-          font-size: ${designSettings?.typographySettings?.subtitleComparedPrice?.size || 14}px;
-          font-weight: ${getFontWeight(designSettings?.typographySettings?.subtitleComparedPrice?.fontStyle)};
-          text-decoration: line-through;
-        `;
-        compareAtPriceDiv.textContent = formatPrice(pricing.compareAtPrice);
-        rightContent.appendChild(compareAtPriceDiv);
-      }
-
-      return rightContent;
-    };
-
-    const createHighlightTag = (offer, designSettings, bundleSettings) => {
-      const highlightTag = document.createElement('div');
-      const shape = offer?.highlightSettings?.shape || 'rounded';
-      const style = offer?.highlightSettings?.style || 'pill';
-      
-      let borderRadius = '12px';
-      if (style === 'rectangle') {
-        borderRadius = '4px';
-      } else if (shape === 'square') {
-        borderRadius = '2px';
-      }
-
-      highlightTag.style.cssText = `
-        position: absolute;
-        top: -10px;
-        right: 20px;
-        background-color: ${rgbaToString(designSettings?.backgroundColors?.highlight)};
-        color: ${rgbaToString(designSettings?.textColors?.highlight)};
-        padding: 4px 8px;
-        border-radius: ${borderRadius};
-        font-size: ${designSettings?.typographySettings?.tagHighlight?.size || 12}px;
-        font-weight: ${getFontWeight(designSettings?.typographySettings?.tagHighlight?.fontStyle)};
-        z-index: 1;
-        ${offer?.highlightSettings?.blinking ? 'animation: blink 1s linear infinite;' : ''}
-      `;
-      highlightTag.textContent = offer?.highlightSettings?.text || '';
-
-      return highlightTag;
-    };
-
-    // Add CSS for animations and hover effects
+  // Add CSS for animations and hover effects
+  const addVolumeDiscountStyles = () => {
+    if (document.getElementById('volume-discount-styles')) return;
+    
     const style = document.createElement('style');
+    style.id = 'volume-discount-styles';
     style.textContent = `
-      @keyframes blink {
+      @keyframes vd-blink {
         0%, 50% { opacity: 1; }
         51%, 100% { opacity: 0.5; }
       }
       
-      .offer-item:hover {
+      .vd-volume-bundle .offer-item:hover {
         transform: translateY(-2px);
         box-shadow: 0 4px 8px rgba(0,0,0,0.1);
       }
@@ -661,11 +832,44 @@
         margin: 20px 0;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
       }
+
+      .vd-volume-bundle .offers-container {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
     `;
     document.head.appendChild(style);
+  };
 
-    // Initialize the volume discount
+  // Initialize volume discount system
+  function initializeVolumeDiscount() {
+    console.log('Initializing volume discount system');
+    addVolumeDiscountStyles();
     loadVolumeDiscount();
-  });
-</script>
+  }
 
+  // Auto-start injection
+  function startVolumeInjection() {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        if (!injectVolumeDiscount()) {
+          setupRetryMechanism();
+        } else {
+          initializeVolumeDiscount();
+        }
+      });
+    } else {
+      if (!injectVolumeDiscount()) {
+        setupRetryMechanism();
+      } else {
+        initializeVolumeDiscount();
+      }
+    }
+  }
+
+  // Start the injection process
+  startVolumeInjection();
+
+})();
+</script>

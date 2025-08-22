@@ -44,10 +44,52 @@ export async function loader({ request }) {
       },
     });
 
-    return json({ bundles, volumes });
+    // Get analytics data for the last 30 days
+    const dateFrom = new Date(
+      Date.now() - 30 * 24 * 60 * 60 * 1000,
+    ).toISOString();
+    const dateTo = new Date().toISOString();
+
+    const analytics = await prisma.bundleAnalytics.groupBy({
+      by: ["type"],
+      where: {
+        shopDomain: shop.domain,
+        timestamp: {
+          gte: new Date(dateFrom),
+          lte: new Date(dateTo),
+        },
+      },
+      _count: { id: true },
+      _sum: { revenue: true },
+    });
+
+    // Calculate summary metrics
+    const analyticsData = {
+      totalImpressions:
+        analytics.find((a) => a.type === "IMPRESSION")?._count.id || 0,
+      totalAddToCarts:
+        analytics.find((a) => a.type === "ADD_TO_CART")?._count.id || 0,
+      totalOrders: analytics.find((a) => a.type === "ORDER")?._count.id || 0,
+      totalRevenue:
+        analytics.find((a) => a.type === "ORDER")?._sum.revenue || 0,
+    };
+
+    return json({ bundles, volumes, analytics: analyticsData });
   } catch (error) {
     console.error("Error fetching bundles and volumes:", error);
-    return json({ bundles: [], volumes: [] }, { status: 500 });
+    return json(
+      {
+        bundles: [],
+        volumes: [],
+        analytics: {
+          totalImpressions: 0,
+          totalAddToCarts: 0,
+          totalOrders: 0,
+          totalRevenue: 0,
+        },
+      },
+      { status: 500 },
+    );
   }
 }
 
@@ -110,7 +152,7 @@ export async function action({ request }) {
 }
 
 export default function Dashboard() {
-  const { bundles, volumes } = useLoaderData();
+  const { bundles, volumes, analytics } = useLoaderData();
 
   // Banner states (keep existing banner for other notifications)
   const [showBanner, setShowBanner] = useState(false);
@@ -201,25 +243,25 @@ export default function Dashboard() {
 
   // Show delete confirmation modal for volume discounts
   const showDeleteConfirmation = (volumeId, volumeName) => {
-    setItemToDelete({ id: volumeId, name: volumeName, type: 'volume' });
+    setItemToDelete({ id: volumeId, name: volumeName, type: "volume" });
     setIsDeleteModalOpen(true);
   };
 
   // Show delete confirmation modal for product bundles
   const showBundleDeleteConfirmation = (bundleId, bundleName) => {
-    setItemToDelete({ id: bundleId, name: bundleName, type: 'bundle' });
+    setItemToDelete({ id: bundleId, name: bundleName, type: "bundle" });
     setIsDeleteModalOpen(true);
   };
 
   // Handle confirmed deletion
   const handleConfirmDelete = () => {
     if (itemToDelete) {
-      if (itemToDelete.type === 'volume') {
+      if (itemToDelete.type === "volume") {
         deleteVolumeFetcher.submit(
           { volumeId: itemToDelete.id.toString() },
           { method: "post", action: "/api/delete-volume-discount" },
         );
-      } else if (itemToDelete.type === 'bundle') {
+      } else if (itemToDelete.type === "bundle") {
         deleteBundleFetcher.submit(
           { bundleId: itemToDelete.id.toString() },
           { method: "post", action: "/api/delete-product-bundle" },
@@ -253,20 +295,26 @@ export default function Dashboard() {
               status="warning"
               tone="warning"
               onDismiss={() => {}}
-              action={{
-                content: "Activate",
-                onAction: () => {},
-              }}
+              // action={{
+              //   content: "Activate",
+              //   onAction: () => {},
+              // }}
             >
               <p>
                 Please activate the app by clicking 'Activate' button below and
                 then 'Save' in the following page.
               </p>
+              <Button
+                target="_blank"
+                url="https://admin.shopify.com/store/quantum-mechanic-2/themes/148066730211/editor?previewPath=%2Fproducts%2Fwave-walker-arrow-split-toe-black-derby-formal-shoes-for-men&context=apps"
+              >
+                Activate
+              </Button>
             </Banner>
           </Layout.Section>
 
           <Layout.Section>
-            <Analytics />
+            <Analytics data={analytics} />
           </Layout.Section>
 
           {/* Middle Banner */}
@@ -343,12 +391,19 @@ export default function Dashboard() {
         <Modal
           open={isDeleteModalOpen}
           onClose={handleCancelDelete}
-          title={itemToDelete?.type === 'bundle' ? "Delete Product Bundle" : "Delete Volume Discount"}
+          title={
+            itemToDelete?.type === "bundle"
+              ? "Delete Product Bundle"
+              : "Delete Volume Discount"
+          }
           primaryAction={{
             content: "Delete",
             onAction: handleConfirmDelete,
             destructive: true,
-            loading: (itemToDelete?.type === 'bundle' ? deleteBundleFetcher.state : deleteVolumeFetcher.state) === "submitting",
+            loading:
+              (itemToDelete?.type === "bundle"
+                ? deleteBundleFetcher.state
+                : deleteVolumeFetcher.state) === "submitting",
           }}
           secondaryActions={[
             {
@@ -365,7 +420,7 @@ export default function Dashboard() {
             <br />
             <p>This will permanently remove:</p>
             <ul style={{ marginLeft: "20px", marginTop: "8px" }}>
-              {itemToDelete?.type === 'bundle' ? (
+              {itemToDelete?.type === "bundle" ? (
                 <>
                   <li>The product bundle from your database</li>
                   <li>All associated bundle products</li>

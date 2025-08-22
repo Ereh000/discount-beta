@@ -1,5 +1,10 @@
-import { Tabs, Text, Grid, Card, BlockStack, Button } from "@shopify/polaris";
-
+import { Tabs, Text, Grid, Card, BlockStack, Button, Icon } from "@shopify/polaris";
+import {
+  ViewIcon,
+  CartIcon,
+  OrderIcon,
+  CashDollarIcon,
+} from "@shopify/polaris-icons";
 import { useCallback, useState } from "react";
 
 function TimeframeTabs() {
@@ -40,72 +45,87 @@ function TimeframeTabs() {
   );
 }
 
-const Analytics = () => {
+const MetricCard = ({ title, value, icon, color = "success" }) => (
+  <Card>
+    <BlockStack gap="200" padding="400">
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <div
+            style={{
+              padding: "8px",
+              borderRadius: "8px",
+              backgroundColor: color === "success" ? "#E3F2E1" : color === "warning" ? "#FFF4E5" : color === "info" ? "#E1F5FE" : "#F3E8FF",
+              color: color === "success" ? "#008060" : color === "warning" ? "#B45309" : color === "info" ? "#0288D1" : "#7B1FA2",
+            }}
+          >
+            <Icon source={icon} />
+          </div>
+          <div>
+            <Text variant="bodyMd" color="subdued">
+              {title}
+            </Text>
+            <Text variant="headingLg" as="h3">
+              {value}
+            </Text>
+          </div>
+        </div>
+      </div>
+      <Button plain url="/app/analytics">View Report</Button>
+    </BlockStack>
+  </Card>
+);
+
+const Analytics = ({ data }) => {
+  // Default values if no data is provided
+  const analyticsData = data || {
+    totalImpressions: 0,
+    totalAddToCarts: 0,
+    totalOrders: 0,
+    totalRevenue: 0,
+  };
+
   return (
     <div>
       <TimeframeTabs />
       <div>
         <Grid>
           <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3, xl: 3 }}>
-            <Card style={{ flex: 1 }}>
-              <BlockStack gap="200" padding="400">
-                <Text variant="bodyMd" as="p" color="subdued">
-                  Total additional revenue
-                </Text>
-                <Text variant="headingLg" as="h3">
-                  Rs. 0.00 INR
-                </Text>
-                <Text variant="bodyMd" as="p">
-                  $0.00 USD
-                </Text>
-                <Button plain>View Report</Button>
-              </BlockStack>
-            </Card>
-          </Grid.Cell>
-          {/* Other stat cards */}
-          <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3, xl: 3 }}>
-            <Card style={{ flex: 1 }}>
-              <BlockStack gap="200" padding="400">
-                <Text variant="bodyMd" as="p" color="subdued">
-                  Total orders
-                </Text>
-                <Text variant="headingLg" as="h3">
-                  0
-                </Text>
-                <div style={{ height: "24px" }}></div>
-                <Button plain>View Report</Button>
-              </BlockStack>
-            </Card>
+            <MetricCard
+              title="Total Impressions"
+              value={analyticsData.totalImpressions.toLocaleString()}
+              icon={ViewIcon}
+              color="info"
+            />
           </Grid.Cell>
           <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3, xl: 3 }}>
-            <Card style={{ flex: 1 }}>
-              <BlockStack gap="200" padding="400">
-                <Text variant="bodyMd" as="p" color="subdued">
-                  ROI
-                </Text>
-                <Text variant="headingLg" as="h3">
-                  ∞
-                </Text>
-                <div style={{ height: "24px" }}></div>
-                <Button plain>View Report</Button>
-              </BlockStack>
-            </Card>
+            <MetricCard
+              title="Add to Carts"
+              value={analyticsData.totalAddToCarts.toLocaleString()}
+              icon={CartIcon}
+              color="warning"
+            />
           </Grid.Cell>
           <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3, xl: 3 }}>
-            <Card style={{ flex: 1 }}>
-              <BlockStack gap="200" padding="400">
-                <Text variant="bodyMd" as="p" color="subdued">
-                  Average extra revenue
-                </Text>
-                <Text variant="headingLg" as="h3">
-                  Rs. 0.00 INR
-                </Text>
-                <Text variant="bodyMd" as="p">
-                  $0.00 USD
-                </Text>
-                <Button plain>View Report</Button>
-              </BlockStack>
-            </Card>
+            <MetricCard
+              title="Orders"
+              value={analyticsData.totalOrders.toLocaleString()}
+              icon={OrderIcon}
+              color="success"
+            />
+          </Grid.Cell>
+          <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3, xl: 3 }}>
+            <MetricCard
+              title="Revenue"
+              value={`$${analyticsData.totalRevenue.toFixed(2)}`}
+              icon={CashDollarIcon}
+              color="purple"
+            />
           </Grid.Cell>
         </Grid>
       </div>

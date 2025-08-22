@@ -1,11 +1,43 @@
-/* product-bundle.js */
+/* product-bundle.js - Complete Bundle with Smart Injection */
 const shopUrl = window.shopUrl;
 let bundle = null;
 let settings = null;
 let products = [];
-let bundleTracker = null; // Add tracker instance
+let bundleTracker = null;
 
 const dom = {};
+
+// Predefined triggers for different themes and page structures
+const INJECTION_TRIGGERS = [
+  // Primary targets - most common product form containers
+  { selector: '.product__info-container', position: 'inside-end' },
+  { selector: '.product-form', position: 'after' },
+  { selector: '[data-product-form]', position: 'after' },
+  { selector: 'product-form', position: 'after' },
+  
+  // Secondary targets - product info sections
+  { selector: '.product__details', position: 'inside-end' },
+  { selector: '.product-info', position: 'inside-end' },
+  { selector: '.product__info', position: 'inside-end' },
+  { selector: '.product-single__meta', position: 'inside-end' },
+  
+  // Quantity-specific targets (preferred positioning)
+  { selector: '.buy-buttons-block', position: 'after' },
+  { selector: 'product-form-component', position: 'after' },
+  { selector: '.quantity-selector', position: 'after' },
+  { selector: '[data-quantity-selector]', position: 'after' },
+  { selector: '.product__quantity', position: 'after' },
+  
+  // Button-specific positioning
+  { selector: '.product-form__buttons', position: 'before' },
+  { selector: '.product__buttons', position: 'before' },
+  { selector: '[data-add-to-cart]', position: 'before' },
+  
+  // Fallback targets
+  { selector: '.product', position: 'inside-end' },
+  { selector: '.product-single', position: 'inside-end' },
+  { selector: 'main .container', position: 'inside-end' }
+];
 
 // Bundle Tracker Class
 class BundleTracker {
@@ -14,8 +46,6 @@ class BundleTracker {
     this.bundleId = bundleId;
     this.bundleName = bundleName;
     this.apiEndpoint = `${shopDomain}/apps/vol-api/analytics`;
-    
-    // Track impression when tracker is initialized
     this.trackImpression();
   }
 
@@ -23,9 +53,7 @@ class BundleTracker {
     try {
       await fetch(this.apiEndpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type,
           bundleId: this.bundleId,
@@ -47,37 +75,186 @@ class BundleTracker {
   }
 }
 
-function hexToRgba(hex, alpha = 1) {
-  // Remove leading #
-  hex = hex.replace(/^#/, '');
+// Smart Injection Manager
+class SmartInjector {
+  constructor() {
+    this.injected = false;
+  }
 
-  // Handle shorthand (#RGB → #RRGGBB)
+  isProductPage() {
+    return document.body.classList.contains('template-product') ||
+           window.location.pathname.includes('/products/') ||
+           document.querySelector('form[action*="/cart/add"]') ||
+           document.querySelector('[data-product-form]') ||
+           document.querySelector('product-form');
+  }
+
+  findBestTarget() {
+    if (!this.isProductPage()) {
+      console.log('Not a product page, skipping bundle injection');
+      return null;
+    }
+
+    for (const trigger of INJECTION_TRIGGERS) {
+      const element = document.querySelector(trigger.selector);
+      if (element) {
+        console.log(`Found injection target: ${trigger.selector} (${trigger.position})`);
+        return { element, position: trigger.position };
+      }
+    }
+    
+    console.log('No suitable injection target found');
+    return null;
+  }
+
+  inject() {
+    if (this.injected) return true;
+
+    const target = this.findBestTarget();
+    if (!target) return false;
+
+    // Create container
+    const container = document.createElement('div');
+    container.id = 'pb-placeholder';
+    container.className = 'pb-embedded-container';
+    container.style.cssText = `
+      margin: 15px 0;
+      width: 100%;
+      clear: both;
+    `;
+
+    // Insert based on position
+    this.insertElement(target.element, container, target.position);
+    
+    this.injected = true;
+    console.log('Bundle container injected successfully');
+    return true;
+  }
+
+  insertElement(targetElement, container, position) {
+    switch (position) {
+      case 'before':
+        targetElement.parentNode.insertBefore(container, targetElement);
+        break;
+      case 'after':
+        if (targetElement.nextSibling) {
+          targetElement.parentNode.insertBefore(container, targetElement.nextSibling);
+        } else {
+          targetElement.parentNode.appendChild(container);
+        }
+        break;
+      case 'inside-start':
+        targetElement.insertBefore(container, targetElement.firstChild);
+        break;
+      case 'inside-end':
+      default:
+        targetElement.appendChild(container);
+        break;
+    }
+  }
+
+  setupRetryMechanism() {
+    let attempts = 0;
+    const maxAttempts = 15;
+    
+    const retryInterval = setInterval(() => {
+      if (this.injected || attempts >= maxAttempts) {
+        clearInterval(retryInterval);
+        if (!this.injected) {
+          console.log('Failed to inject bundle after maximum attempts');
+        }
+        return;
+      }
+      
+      if (this.inject()) {
+        clearInterval(retryInterval);
+        initializeBundle();
+      }
+      
+      attempts++;
+    }, 300);
+
+    // Mutation observer for dynamic content
+    if (typeof MutationObserver !== 'undefined') {
+      const observer = new MutationObserver((mutations) => {
+        if (this.injected) {
+          observer.disconnect();
+          return;
+        }
+        
+        for (const mutation of mutations) {
+          if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+            if (this.inject()) {
+              observer.disconnect();
+              initializeBundle();
+              break;
+            }
+          }
+        }
+      });
+
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+
+      // Clean up observer after timeout
+      setTimeout(() => observer.disconnect(), 10000);
+    }
+  }
+}
+
+// Initialize injector
+const injector = new SmartInjector();
+
+// Utility Functions
+function hexToRgba(hex, alpha = 1) {
+  hex = hex.replace(/^#/, '');
   if (hex.length === 3) {
     hex = hex.split('').map(char => char + char).join('');
   }
-
   if (hex.length !== 6) {
     throw new Error('Invalid HEX color.');
   }
-
   const r = parseInt(hex.substring(0, 2), 16);
   const g = parseInt(hex.substring(2, 4), 16);
   const b = parseInt(hex.substring(4, 6), 16);
-
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
-  await initializeBundle();
-});
+function querySelector(selector, rootElement = document) { 
+  return rootElement.querySelector(selector); 
+}
 
+function querySelectorAll(selector, rootElement = document) { 
+  return [...rootElement.querySelectorAll(selector)]; 
+}
+
+// Auto-start injection
+function startEmbedInjection() {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!injector.inject()) {
+        injector.setupRetryMechanism();
+      } else {
+        initializeBundle();
+      }
+    });
+  } else {
+    if (!injector.inject()) {
+      injector.setupRetryMechanism();
+    } else {
+      initializeBundle();
+    }
+  }
+}
+
+// Bundle initialization
 async function initializeBundle() {
   try {
-    // Load bundle data first
     await loadBundle();
     if (!bundle) return;
 
-    // Initialize tracker after bundle is loaded
     if (bundle && bundle.id) {
       bundleTracker = new BundleTracker(
         shopUrl,
@@ -86,21 +263,13 @@ async function initializeBundle() {
       );
     }
 
-    // Create DOM structure after data is loaded
     createBundleDOM();
-    
-    // Cache DOM elements
     cacheDom();
-    
-    // Apply settings and styling
     applyTheme();
-    
-    // Load and render products
     await loadBundleProducts();
     renderProducts();
     recalcTotals();
     bindEvents();
-    
   } catch (error) {
     console.error('Bundle initialization failed:', error);
   }
@@ -146,12 +315,10 @@ function createBundleDOM() {
   const placeholder = document.getElementById('pb-placeholder');
   if (!placeholder) return;
 
-  // Create main container
   const container = document.createElement('div');
   container.id = 'pb-root';
-  container.className = 'pb-container';
+  container.className = 'pb-container pb-embedded';
 
-  // Create header (without cart icon as requested)
   const header = document.createElement('div');
   header.className = 'pb-header';
   
@@ -159,25 +326,20 @@ function createBundleDOM() {
   heading.className = 'pb-heading';
   heading.textContent = settings?.header || 'Frequently bought together';
   header.appendChild(heading);
-  
   container.appendChild(header);
 
-  // Create products container
   const productsDiv = document.createElement('div');
   productsDiv.className = 'pb-products';
   container.appendChild(productsDiv);
 
-  // Create summary section
   const summary = document.createElement('div');
   summary.className = 'pb-summary';
 
-  // Create discount badge
   const discountBadge = document.createElement('div');
   discountBadge.className = 'pb-discount-badge';
   discountBadge.textContent = settings?.highlight?.title || '';
   summary.appendChild(discountBadge);
 
-  // Create total section
   const total = document.createElement('div');
   total.className = 'pb-total';
 
@@ -192,24 +354,13 @@ function createBundleDOM() {
 
   summary.appendChild(total);
 
-  // Create add to cart button
   const addToCartButton = document.createElement('button');
   addToCartButton.className = 'pb-add-to-cart';
   addToCartButton.textContent = settings?.button || 'Claim Offer';
   summary.appendChild(addToCartButton);
 
   container.appendChild(summary);
-
-  // Replace placeholder with the bundle
-  placeholder.parentNode.replaceChild(container, placeholder);
-}
-
-function querySelector(selector, rootElement = document) { 
-  return rootElement.querySelector(selector); 
-}
-
-function querySelectorAll(selector, rootElement = document) { 
-  return [...rootElement.querySelectorAll(selector)]; 
+  placeholder.appendChild(container);
 }
 
 function cacheDom() {
@@ -236,7 +387,6 @@ function applyTheme() {
   const shapes = settings.shapes || {};
   const borderThickness = settings.borderThickness || {};
 
-  // Container styling
   if (dom.root) {
     if (spacing.bundleTop) dom.root.style.paddingTop = `${spacing.bundleTop}px`;
     if (spacing.bundleBottom) dom.root.style.paddingBottom = `${spacing.bundleBottom}px`;
@@ -244,7 +394,6 @@ function applyTheme() {
     if (shapes.bundle === 'Rounded') dom.root.style.borderRadius = '12px';
   }
 
-  // Header styling
   if (dom.heading) {
     if (colors.headerText) dom.heading.style.color = colors.headerText;
     if (typography.header?.size) dom.heading.style.fontSize = `${typography.header.size}px`;
@@ -255,7 +404,6 @@ function applyTheme() {
     if (settings.alignment) dom.heading.style.textAlign = settings.alignment;
   }
 
-  // Total section styling  
   if (dom.totalSection) {
     if (colors.footerBackground) dom.totalSection.style.backgroundColor = colors.footerBackground;
     if (colors.footerText) dom.totalSection.style.color = colors.footerText;
@@ -269,26 +417,22 @@ function applyTheme() {
     if (shapes.footer === 'Rounded') dom.totalSection.style.borderRadius = '7px';
   }
 
-  // Discount badge styling
   if (dom.discountBadge) {
     if (colors.highlightBackground) dom.discountBadge.style.backgroundColor = colors.highlightBackground;
     if (colors.highlightText) dom.discountBadge.style.color = colors.highlightText;
     if (typography.highlight?.size) dom.discountBadge.style.fontSize = `${typography.highlight.size}px`;
     if (typography.highlight?.fontStyle === 'Bold') dom.discountBadge.style.fontWeight = '700';
     
-    // Handle blinking effect
     if (settings.highlight?.isBlinking) {
       dom.discountBadge.style.animation = 'pb-blink 1s infinite';
       addBlinkingCSS();
     }
 
-    // Handle timer
     if (settings.highlight?.option === 'timer' && settings.highlight?.timerEndDate) {
       setupTimer();
     }
   }
 
-  // Button styling
   if (dom.addToCartButton) {
     if (colors.buttonBackground) dom.addToCartButton.style.backgroundColor = colors.buttonBackground;
     if (colors.addToCartText) dom.addToCartButton.style.color = colors.addToCartText;
@@ -300,7 +444,6 @@ function applyTheme() {
     if (shapes.addToCart === 'Rounded') dom.addToCartButton.style.borderRadius = '10px';
   }
 
-  // Apply dynamic CSS variables for product styling
   const documentRoot = document.documentElement;
   if (colors.titleText) documentRoot.style.setProperty('--pb-title-color', colors.titleText);
   if (colors.price) documentRoot.style.setProperty('--pb-price-color', colors.price);
@@ -599,7 +742,6 @@ function addToCart() {
   })
     .then(response => response.ok ? response.json() : Promise.reject(response))
     .then(() => {
-      // Track add to cart success
       if (bundleTracker) {
         const productIds = products.map(p => p.id.toString());
         bundleTracker.trackAddToCart(productIds);
@@ -615,3 +757,6 @@ function addToCart() {
       }
     });
 }
+
+// Start the injection process automatically
+startEmbedInjection();
