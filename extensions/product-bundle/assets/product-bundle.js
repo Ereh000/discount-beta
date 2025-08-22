@@ -1,142 +1,235 @@
 /* product-bundle.js */
-const shopUrl  = window.shopUrl;
-let bundle     = null;
-let settings   = null;
-let products   = [];
+const shopUrl = window.shopUrl;
+let bundle = null;
+let settings = null;
+let products = [];
 
 const dom = {};
 
+function hexToRgba(hex, alpha = 1) {
+  // Remove leading #
+  hex = hex.replace(/^#/, '');
+
+  // Handle shorthand (#RGB → #RRGGBB)
+  if (hex.length === 3) {
+    hex = hex.split('').map(char => char + char).join('');
+  }
+
+  if (hex.length !== 6) {
+    throw new Error('Invalid HEX color.');
+  }
+
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+
 document.addEventListener('DOMContentLoaded', async () => {
-  await loadBundle();
-  if (!bundle) return;
-
-  cacheDom();
-  fillStaticText();
-  applyTheme();
-
-  await loadBundleProducts();
-  renderProducts();
-  recalcTotals();
-  bindEvents();
+  await initializeBundle();
 });
+
+async function initializeBundle() {
+  try {
+    // Load bundle data first
+    await loadBundle();
+    if (!bundle) return;
+
+    // Create DOM structure after data is loaded
+    createBundleDOM();
+    
+    // Cache DOM elements
+    cacheDom();
+    
+    // Apply settings and styling
+    applyTheme();
+    
+    // Load and render products
+    await loadBundleProducts();
+    renderProducts();
+    recalcTotals();
+    bindEvents();
+    
+  } catch (error) {
+    console.error('Bundle initialization failed:', error);
+  }
+}
 
 async function loadBundle() {
   try {
-    const res  = await fetch(`${shopUrl}/apps/vol-api/product-bundle`);
-    const data = await res.json();
+    const response = await fetch(`${shopUrl}/apps/vol-api/product-bundle`);
+    const data = await response.json();
+    console.log("bundle settings data:", data?.bundles[0]?.settings);
+
     if (data.success && data.bundles?.length > 0) {
-      bundle   = data.bundles.find(b => b.status === 'published');
+      bundle = data.bundles.find(bundleItem => bundleItem.status === 'published');
       settings = bundle?.settings || null;
     }
-  } catch (e) { console.error('Bundle fetch error', e); }
+  } catch (error) { 
+    console.error('Bundle fetch error', error); 
+  }
 }
 
 async function loadBundleProducts() {
   if (!bundle) return;
   try {
-    const res  = await fetch(
+    const response = await fetch(
       `${shopUrl}/apps/vol-api/product-bundle?bundleId=${bundle.id}`
     );
-    const data = await res.json();
+    const data = await response.json();
     if (data.success && data.fetchedProducts) {
       products = data.fetchedProducts;
     }
-  } catch (e) { console.error('Product fetch error', e); }
+  } catch (error) { 
+    console.error('Product fetch error', error); 
+  }
 }
 
 function fetchVariants(productGid) {
   return fetch(
     `${shopUrl}/apps/vol-api/product-variant?productId=${productGid}`
-  ).then(r => r.json());
+  ).then(response => response.json());
 }
 
-function $(sel, root = document)  { return root.querySelector(sel); }
-function $$(sel, root = document) { return [...root.querySelectorAll(sel)]; }
+function createBundleDOM() {
+  const placeholder = document.getElementById('pb-placeholder');
+  if (!placeholder) return;
+
+  // Create main container
+  const container = document.createElement('div');
+  container.id = 'pb-root';
+  container.className = 'pb-container';
+
+  // Create header (without cart icon as requested)
+  const header = document.createElement('div');
+  header.className = 'pb-header';
+  
+  const heading = document.createElement('h2');
+  heading.className = 'pb-heading';
+  heading.textContent = settings?.header || 'Frequently bought together';
+  header.appendChild(heading);
+  
+  container.appendChild(header);
+
+  // Create products container
+  const productsDiv = document.createElement('div');
+  productsDiv.className = 'pb-products';
+  container.appendChild(productsDiv);
+
+  // Create summary section
+  const summary = document.createElement('div');
+  summary.className = 'pb-summary';
+
+  // Create discount badge
+  const discountBadge = document.createElement('div');
+  discountBadge.className = 'pb-discount-badge';
+  discountBadge.textContent = settings?.highlight?.title || '';
+  summary.appendChild(discountBadge);
+
+  // Create total section
+  const total = document.createElement('div');
+  total.className = 'pb-total';
+
+  const label = document.createElement('span');
+  label.className = 'pb-summary-label';
+  label.textContent = settings?.footer || 'Total :';
+  total.appendChild(label);
+
+  const price = document.createElement('span');
+  price.className = 'pb-current-price';
+  total.appendChild(price);
+
+  summary.appendChild(total);
+
+  // Create add to cart button
+  const addToCartButton = document.createElement('button');
+  addToCartButton.className = 'pb-add-to-cart';
+  addToCartButton.textContent = settings?.button || 'Claim Offer';
+  summary.appendChild(addToCartButton);
+
+  container.appendChild(summary);
+
+  // Replace placeholder with the bundle
+  placeholder.parentNode.replaceChild(container, placeholder);
+}
+
+function querySelector(selector, rootElement = document) { 
+  return rootElement.querySelector(selector); 
+}
+
+function querySelectorAll(selector, rootElement = document) { 
+  return [...rootElement.querySelectorAll(selector)]; 
+}
 
 function cacheDom() {
-  const root = $('#pb-root');
-  if (!root) return;
+  const rootElement = querySelector('#pb-root');
+  if (!rootElement) return;
   
   Object.assign(dom, {
-    root,
-    heading : $('.pb-heading',  root),
-    proWrap : $('.pb-products', root),
-    price   : $('.pb-current-price', root),
-    badge   : $('.pb-discount-badge', root),
-    addBtn  : $('.pb-add-to-cart', root),
-    total   : $('.pb-total', root)
+    root: rootElement,
+    heading: querySelector('.pb-heading', rootElement),
+    productsWrapper: querySelector('.pb-products', rootElement),
+    priceElement: querySelector('.pb-current-price', rootElement),
+    discountBadge: querySelector('.pb-discount-badge', rootElement),
+    addToCartButton: querySelector('.pb-add-to-cart', rootElement),
+    totalSection: querySelector('.pb-total', rootElement)
   });
-}
-
-function fillStaticText() {
-  if (!settings) return;
-  if (settings.header && dom.heading)             dom.heading.textContent = settings.header;
-  if (settings.highlight?.title && dom.badge)     dom.badge.textContent   = settings.highlight.title;
-  if (settings.button && dom.addBtn)              dom.addBtn.textContent  = settings.button;
-  if (settings.footer && $('.pb-summary-label'))  $('.pb-summary-label').textContent = settings.footer;
 }
 
 function applyTheme() {
   if (!settings) return;
   
-  const c = settings.colors || {};
-  const t = settings.typography || {};
-  const s = settings.spacing || {};
-  const sh = settings.shapes || {};
-  const bt = settings.borderThickness || {};
+  const colors = settings.colors || {};
+  const typography = settings.typography || {};
+  const spacing = settings.spacing || {};
+  const shapes = settings.shapes || {};
+  const borderThickness = settings.borderThickness || {};
 
   // Container styling
   if (dom.root) {
-    if (s.bundleTop) dom.root.style.paddingTop = `${s.bundleTop}px`;
-    if (s.bundleBottom) dom.root.style.paddingBottom = `${s.bundleBottom}px`;
-    if (c.border) dom.root.style.borderColor = c.border;
-    if (bt.bundle) {
-      dom.root.style.borderWidth = `${bt.bundle}px`;
-      dom.root.style.borderStyle = bt.bundle === '0' ? 'none' : 'solid';
-    }
-    if (sh.bundle === 'Rounded') dom.root.style.borderRadius = '12px';
+    if (spacing.bundleTop) dom.root.style.paddingTop = `${spacing.bundleTop}px`;
+    if (spacing.bundleBottom) dom.root.style.paddingBottom = `${spacing.bundleBottom}px`;
+    if (colors.border) dom.root.style.borderColor = colors.border;
+    if (shapes.bundle === 'Rounded') dom.root.style.borderRadius = '12px';
   }
 
   // Header styling
   if (dom.heading) {
-    if (c.headerText) dom.heading.style.color = c.headerText;
-    if (t.header?.size) dom.heading.style.fontSize = `${t.header.size}px`;
-    if (t.header?.weight) {
-      dom.heading.style.fontWeight = t.header.weight === 'Bold' ? '700' : 
-                                     t.header.weight === 'Lighter' ? '300' : '400';
+    if (colors.headerText) dom.heading.style.color = colors.headerText;
+    if (typography.header?.size) dom.heading.style.fontSize = `${typography.header.size}px`;
+    if (typography.header?.weight) {
+      dom.heading.style.fontWeight = typography.header.weight === 'Bold' ? '700' : 
+                                     typography.header.weight === 'Lighter' ? '300' : '400';
     }
     if (settings.alignment) dom.heading.style.textAlign = settings.alignment;
   }
 
-  // Product cards styling
-  if (dom.proWrap && c.background) {
-    dom.proWrap.style.setProperty('--pb-product-bg', c.background);
-  }
-
   // Total section styling  
-  if (dom.total) {
-    if (c.footerBackground) dom.total.style.backgroundColor = c.footerBackground;
-    if (c.footerText) dom.total.style.color = c.footerText;
-    if (s.footerTop) dom.total.style.marginTop = `${s.footerTop}px`;
-    if (s.footerBottom) dom.total.style.marginBottom = `${s.footerBottom}px`;
-    if (bt.footer && bt.footer !== '0') {
-      dom.total.style.borderWidth = `${bt.footer}px`;
-      dom.total.style.borderStyle = 'solid';
-      if (c.border) dom.total.style.borderColor = c.border;
+  if (dom.totalSection) {
+    if (colors.footerBackground) dom.totalSection.style.backgroundColor = colors.footerBackground;
+    if (colors.footerText) dom.totalSection.style.color = colors.footerText;
+    if (spacing.footerTop) dom.totalSection.style.marginTop = `${spacing.footerTop}px`;
+    if (spacing.footerBottom) dom.totalSection.style.marginBottom = `${spacing.footerBottom}px`;
+    if (borderThickness.footer && borderThickness.footer !== '0') {
+      dom.totalSection.style.borderWidth = `${borderThickness.footer}px`;
+      dom.totalSection.style.borderStyle = 'solid';
+      if (colors.border) dom.totalSection.style.borderColor = colors.border;
     }
-    if (sh.footer === 'Rounded') dom.total.style.borderRadius = '12px';
+    if (shapes.footer === 'Rounded') dom.totalSection.style.borderRadius = '7px';
   }
 
   // Discount badge styling
-  if (dom.badge) {
-    if (c.highlightBackground) dom.badge.style.backgroundColor = c.highlightBackground;
-    if (c.highlightText) dom.badge.style.color = c.highlightText;
-    if (t.highlight?.size) dom.badge.style.fontSize = `${t.highlight.size}px`;
-    if (t.highlight?.fontStyle === 'Bold') dom.badge.style.fontWeight = '700';
+  if (dom.discountBadge) {
+    if (colors.highlightBackground) dom.discountBadge.style.backgroundColor = colors.highlightBackground;
+    if (colors.highlightText) dom.discountBadge.style.color = colors.highlightText;
+    if (typography.highlight?.size) dom.discountBadge.style.fontSize = `${typography.highlight.size}px`;
+    if (typography.highlight?.fontStyle === 'Bold') dom.discountBadge.style.fontWeight = '700';
     
     // Handle blinking effect
     if (settings.highlight?.isBlinking) {
-      dom.badge.style.animation = 'pb-blink 1s infinite';
+      dom.discountBadge.style.animation = 'pb-blink 1s infinite';
       addBlinkingCSS();
     }
 
@@ -147,57 +240,58 @@ function applyTheme() {
   }
 
   // Button styling
-  if (dom.addBtn) {
-    if (c.buttonBackground) dom.addBtn.style.backgroundColor = c.buttonBackground;
-    if (c.addToCartText) dom.addBtn.style.color = c.addToCartText;
-    if (c.buttonBorder) dom.addBtn.style.borderColor = c.buttonBorder;
-    if (bt.addToCart) {
-      dom.addBtn.style.borderWidth = `${bt.addToCart}px`;
-      dom.addBtn.style.borderStyle = 'solid';
+  if (dom.addToCartButton) {
+    if (colors.buttonBackground) dom.addToCartButton.style.backgroundColor = colors.buttonBackground;
+    if (colors.addToCartText) dom.addToCartButton.style.color = colors.addToCartText;
+    if (colors.buttonBorder) dom.addToCartButton.style.borderColor = colors.buttonBorder;
+    if (borderThickness.addToCart) {
+      dom.addToCartButton.style.borderWidth = `${borderThickness.addToCart}px`;
+      dom.addToCartButton.style.borderStyle = 'solid';
     }
-    if (sh.addToCart === 'Rounded') dom.addBtn.style.borderRadius = '12px';
+    if (shapes.addToCart === 'Rounded') dom.addToCartButton.style.borderRadius = '10px';
   }
 
   // Apply dynamic CSS variables for product styling
-  const root = document.documentElement;
-  if (c.titleText) root.style.setProperty('--pb-title-color', c.titleText);
-  if (c.price) root.style.setProperty('--pb-price-color', c.price);
-  if (c.comparedPrice) root.style.setProperty('--pb-compare-price-color', c.comparedPrice);
-  if (c.quantityText) root.style.setProperty('--pb-quantity-text-color', c.quantityText);
-  if (c.quantityBackground) root.style.setProperty('--pb-quantity-bg-color', c.quantityBackground);
-  if (c.background) root.style.setProperty('--pb-product-bg-color', c.background);
-  if (c.border) root.style.setProperty('--pb-border-color', c.border);
+  const documentRoot = document.documentElement;
+  if (colors.titleText) documentRoot.style.setProperty('--pb-title-color', colors.titleText);
+  if (colors.price) documentRoot.style.setProperty('--pb-price-color', colors.price);
+  if (colors.comparedPrice) documentRoot.style.setProperty('--pb-compare-price-color', colors.comparedPrice);
+  if (colors.quantityText) documentRoot.style.setProperty('--pb-quantity-text-color', colors.quantityText);
+  if (colors.quantityBackground) documentRoot.style.setProperty('--pb-quantity-bg-color', colors.quantityBackground);
+  if (colors.background) documentRoot.style.setProperty('--pb-product-bg-color', hexToRgba(colors.background, 0.2));
+  if (colors.border) documentRoot.style.setProperty('--pb-border-color', colors.border);
+  if (borderThickness.product) documentRoot.style.setProperty('--pb-border-thickness', `${borderThickness.product}px`);
   
-  if (t.titlePrice?.size) root.style.setProperty('--pb-title-font-size', `${t.titlePrice.size}px`);
-  if (t.titlePrice?.weight) {
-    const weight = t.titlePrice.weight === 'Bold' ? '700' : 
-                   t.titlePrice.weight === 'Lighter' ? '300' : '400';
-    root.style.setProperty('--pb-title-font-weight', weight);
+  if (typography.titlePrice?.size) documentRoot.style.setProperty('--pb-title-font-size', `${typography.titlePrice.size}px`);
+  if (typography.titlePrice?.weight) {
+    const fontWeight = typography.titlePrice.weight === 'Bold' ? '700' : 
+                       typography.titlePrice.weight === 'Lighter' ? '300' : '400';
+    documentRoot.style.setProperty('--pb-title-font-weight', fontWeight);
   }
   
-  if (t.quantityPrice?.size) root.style.setProperty('--pb-quantity-font-size', `${t.quantityPrice.size}px`);
-  if (t.quantityPrice?.fontStyle) {
-    const weight = t.quantityPrice.fontStyle === 'Bold' ? '700' : 
-                   t.quantityPrice.fontStyle === 'Lighter' ? '300' : '400';
-    root.style.setProperty('--pb-quantity-font-weight', weight);
+  if (typography.quantityPrice?.size) documentRoot.style.setProperty('--pb-quantity-font-size', `${typography.quantityPrice.size}px`);
+  if (typography.quantityPrice?.fontStyle) {
+    const fontWeight = typography.quantityPrice.fontStyle === 'Bold' ? '700' : 
+                       typography.quantityPrice.fontStyle === 'Lighter' ? '300' : '400';
+    documentRoot.style.setProperty('--pb-quantity-font-weight', fontWeight);
   }
 
   if (settings.productImageSize) {
-    root.style.setProperty('--pb-image-size', `${settings.productImageSize}px`);
+    documentRoot.style.setProperty('--pb-image-size', `${settings.productImageSize}px`);
   }
 }
 
 function addBlinkingCSS() {
-  if (!$('#pb-blink-style')) {
-    const style = document.createElement('style');
-    style.id = 'pb-blink-style';
-    style.textContent = `
+  if (!querySelector('#pb-blink-style')) {
+    const styleElement = document.createElement('style');
+    styleElement.id = 'pb-blink-style';
+    styleElement.textContent = `
       @keyframes pb-blink {
         0%, 50% { opacity: 1; }
         51%, 100% { opacity: 0.3; }
       }
     `;
-    document.head.appendChild(style);
+    document.head.appendChild(styleElement);
   }
 }
 
@@ -205,30 +299,30 @@ function setupTimer() {
   if (!settings.highlight?.timerEndDate) return;
   
   const endDate = new Date(settings.highlight.timerEndDate);
-  const format = settings.highlight.timerFormat || 'dd:hh:mm:ss';
-  const title = settings.highlight.timerTitle || 'Offer ends in';
+  const timerFormat = settings.highlight.timerFormat || 'dd:hh:mm:ss';
+  const timerTitle = settings.highlight.timerTitle || 'Offer ends in';
 
   function updateTimer() {
-    const now = new Date();
-    const diff = endDate - now;
+    const currentTime = new Date();
+    const timeDifference = endDate - currentTime;
 
-    if (diff <= 0) {
-      dom.badge.innerHTML = 'Offer Expired';
+    if (timeDifference <= 0) {
+      dom.discountBadge.innerHTML = 'Offer Expired';
       return;
     }
 
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    const days = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((timeDifference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((timeDifference % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((timeDifference % (1000 * 60)) / 1000);
 
-    let formattedTime = format
+    let formattedTime = timerFormat
       .replace('dd', days.toString().padStart(2, '0'))
       .replace('hh', hours.toString().padStart(2, '0'))
       .replace('mm', minutes.toString().padStart(2, '0'))
       .replace('ss', seconds.toString().padStart(2, '0'));
 
-    dom.badge.innerHTML = `<div>${title}</div><div>${formattedTime}</div>`;
+    dom.discountBadge.innerHTML = `<div>${timerTitle}</div><div>${formattedTime}</div>`;
   }
 
   updateTimer();
@@ -236,81 +330,82 @@ function setupTimer() {
 }
 
 function renderProducts() {
-  if (!dom.proWrap) return;
-  const wrap = dom.proWrap;
-  wrap.innerHTML = '';
+  if (!dom.productsWrapper) return;
+  const productsContainer = dom.productsWrapper;
+  productsContainer.innerHTML = '';
 
-  products.forEach((p, i) => {
-    const firstVariant = p.variants?.nodes?.[0];
+  products.forEach((product, index) => {
+    const firstVariant = product.variants?.nodes?.[0];
     if (firstVariant) {
-      wrap.appendChild(buildCard(p, firstVariant));
-      if (i < products.length - 1) {
-        const plus = document.createElement('div');
-        plus.className = 'pb-plus-icon';
-        plus.textContent = '+';
-        wrap.appendChild(plus);
+      productsContainer.appendChild(buildProductCard(product, firstVariant));
+      if (index < products.length - 1) {
+        const plusIcon = document.createElement('div');
+        plusIcon.className = 'pb-plus-icon';
+        plusIcon.textContent = '+';
+        productsContainer.appendChild(plusIcon);
       }
     }
   });
 }
 
-function buildCard(p, firstVariant) {
-  const v0   = firstVariant;
-  const card = document.createElement('div');
-  card.className   = 'pb-product';
-  card.dataset.pid = p.id;
-  card.dataset.variant = v0.id;
+function buildProductCard(product, defaultVariant) {
+  const productCard = document.createElement('div');
+  productCard.className = 'pb-product';
+  productCard.dataset.pid = product.id;
+  productCard.dataset.variant = defaultVariant.id;
 
-  const bundleQty = qtyFor(p.id);
-  const compareOk = p.compareAtPriceRange?.minVariantCompareAtPrice?.amount > 
-                    p.priceRangeV2?.minVariantPrice?.amount;
+  const bundleQuantity = getQuantityForProduct(product.id);
+  const hasComparePrice = product.compareAtPriceRange?.minVariantCompareAtPrice?.amount > 
+                          product.priceRangeV2?.minVariantPrice?.amount;
 
-  card.innerHTML = `
+  productCard.innerHTML = `
     <div class="pb-product-wrapper">
       <div class="pb-product-image">
-        <img src="${p.featuredImage?.url || ''}" alt="${p.title}">
+        <img src="${product.featuredImage?.url || ''}" alt="${product.title}">
       </div>
       <div class="pb-product-details">
-        <h3 class="pb-product-title">${p.title}</h3>
-        <div class="pb-product-pricing">
-          ${compareOk ? `<span class="pb-compare-price">$${fmt(v0.compareAtPrice || p.compareAtPriceRange?.minVariantCompareAtPrice?.amount)}</span>` : ''}
-          <span class="pb-current-price">$${fmt(v0.price)}</span>
+        <h3 class="pb-product-title">${product.title}</h3>
+        <div class="pb-pricing-quantity-wrapper">
+          <div class="pb-product-pricing">
+            ${hasComparePrice ? `<span class="pb-compare-price">₹${formatPrice(defaultVariant.compareAtPrice || product.compareAtPriceRange?.minVariantCompareAtPrice?.amount)}</span>` : ''}
+            <span class="pb-current-price">₹${formatPrice(defaultVariant.price)}</span>
+          </div>
+          <div class="pb-quantity-selector">x${bundleQuantity}</div>
         </div>
-        <div class="pb-quantity-selector">x${bundleQty}</div>
-        ${variantSelectors(p, v0)}
+        ${buildVariantSelectors(product, defaultVariant)}
       </div>
     </div>`;
-  return card;
+  return productCard;
 }
 
-function qtyFor(pid) {
-  return bundle.products?.find(x => x.productId === pid)?.quantity || 1;
+function getQuantityForProduct(productId) {
+  return bundle.products?.find(productItem => productItem.productId === productId)?.quantity || 1;
 }
 
-function variantSelectors(p, firstVariant) {
-  if (!p.options?.length) return '';
+function buildVariantSelectors(product, firstVariant) {
+  if (!product.options?.length) return '';
   
-  return p.options
-    .filter(o => o.name !== 'Title')
-    .map(o => {
-      const current = firstVariant.selectedOptions
-        ?.find(so => so.name === o.name)?.value;
+  return product.options
+    .filter(option => option.name !== 'Title')
+    .map(option => {
+      const currentValue = firstVariant.selectedOptions
+        ?.find(selectedOption => selectedOption.name === option.name)?.value;
 
-      const vals = [...new Set(
-        p.variants.nodes
-          ?.map(v => v.selectedOptions?.find(s => s.name === o.name)?.value)
+      const availableValues = [...new Set(
+        product.variants.nodes
+          ?.map(variant => variant.selectedOptions?.find(selectedOption => selectedOption.name === option.name)?.value)
           .filter(Boolean)
       )];
 
-      if (vals.length <= 1) return '';
+      if (availableValues.length <= 1) return '';
 
       return `
         <div class="pb-product-options">
           <label class="pb-option-label">
-            ${o.name}:
-            <select class="pb-option-select" data-option="${o.name}" data-pid="${p.id}">
-              ${vals.map(v =>
-                `<option value="${v}" ${v === current ? 'selected' : ''}>${v}</option>`
+            ${option.name}:
+            <select class="pb-option-select" data-option="${option.name}" data-pid="${product.id}">
+              ${availableValues.map(value =>
+                `<option value="${value}" ${value === currentValue ? 'selected' : ''}>${value}</option>`
               ).join('')}
             </select>
           </label>
@@ -319,76 +414,87 @@ function variantSelectors(p, firstVariant) {
     .join('');
 }
 
-function rawSum() {
-  if (!dom.proWrap) return 0;
+function calculateRawSum() {
+  if (!dom.productsWrapper) return 0;
   
-  return $$('.pb-current-price', dom.proWrap)
-    .reduce((total, el) => {
-      const text = el.textContent.replace(/[^\d.]/g, '');
-      const qty = +el.closest('.pb-product')
+  return querySelectorAll('.pb-current-price', dom.productsWrapper)
+    .reduce((total, priceElement) => {
+      const priceText = priceElement.textContent.replace(/[^\d.]/g, '');
+      const quantity = +priceElement.closest('.pb-product')
         ?.querySelector('.pb-quantity-selector')
         ?.textContent?.replace('x', '') || 1;
-      return total + (parseFloat(text) || 0) * qty;
+      return total + (parseFloat(priceText) || 0) * quantity;
     }, 0);
 }
 
-function discount(sum) {
-  const pr = settings?.pricing || {};
-  if (pr.option === 'percentage') return sum * (1 - (+pr.discountPercentage || 0) / 100);
-  if (pr.option === 'fixedDiscount') return sum - (+pr.fixedDiscount || 0);
-  if (pr.option === 'fixedPrice') return +pr.fixedPrice || sum;
-  return sum;
+function applyDiscount(originalSum) {
+  const pricingSettings = settings?.pricing || {};
+  if (pricingSettings.option === 'percentage') {
+    return originalSum * (1 - (+pricingSettings.discountPercentage || 0) / 100);
+  }
+  if (pricingSettings.option === 'fixedDiscount') {
+    return originalSum - (+pricingSettings.fixedDiscount || 0);
+  }
+  if (pricingSettings.option === 'fixedPrice') {
+    return +pricingSettings.fixedPrice || originalSum;
+  }
+  return originalSum;
 }
 
 function recalcTotals() {
-  if (!dom.price) return;
+  if (!dom.priceElement) return;
   
-  const base  = rawSum();
-  const final = discount(base);
+  const baseTotal = calculateRawSum();
+  const finalTotal = applyDiscount(baseTotal);
   
-  dom.price.textContent = `$${final.toFixed(2)}`;
+  dom.priceElement.textContent = `₹${finalTotal.toFixed(2)}`;
 }
 
-function fmt(n) {
-  return parseFloat(n || 0).toFixed(2);
+function formatPrice(priceValue) {
+  return parseFloat(priceValue || 0).toFixed(2);
 }
 
 function bindEvents() {
-  if (!dom.proWrap || !dom.addBtn) return;
+  if (!dom.productsWrapper || !dom.addToCartButton) return;
 
-  dom.proWrap.addEventListener('change', async e => {
-    if (!e.target.matches('.pb-option-select')) return;
+  dom.productsWrapper.addEventListener('change', async event => {
+    if (!event.target.matches('.pb-option-select')) return;
     
-    const card = e.target.closest('.pb-product');
-    const pid  = card.dataset.pid;
+    const productCard = event.target.closest('.pb-product');
+    const productId = productCard.dataset.pid;
 
-    const choices = [...card.querySelectorAll('.pb-option-select')]
-      .map(s => ({ name: s.dataset.option, value: s.value }));
+    const selectedChoices = [...productCard.querySelectorAll('.pb-option-select')]
+      .map(selectElement => ({ 
+        name: selectElement.dataset.option, 
+        value: selectElement.value 
+      }));
 
     try {
-      const response = await fetchVariants(pid);
-      const variants = response.product?.variants?.nodes;
+      const variantResponse = await fetchVariants(productId);
+      const availableVariants = variantResponse.product?.variants?.nodes;
       
-      if (!variants) return;
+      if (!availableVariants) return;
 
-      const match = variants.find(v =>
-        choices.every(c =>
-          v.selectedOptions?.some(o => o.name === c.name && o.value === c.value)
+      const matchingVariant = availableVariants.find(variant =>
+        selectedChoices.every(choice =>
+          variant.selectedOptions?.some(option => 
+            option.name === choice.name && option.value === choice.value
+          )
         )
       );
       
-      if (!match) return;
+      if (!matchingVariant) return;
 
-      card.dataset.variant = match.id;
+      productCard.dataset.variant = matchingVariant.id;
       
-      const priceEl = $('.pb-current-price', card);
-      if (priceEl) {
-        priceEl.textContent = `$${fmt(match.price)}`;
+      const priceElement = querySelector('.pb-current-price', productCard);
+      if (priceElement) {
+        priceElement.textContent = `₹${formatPrice(matchingVariant.price)}`;
       }
 
-      const cmp = $('.pb-compare-price', card);
-      if (cmp && match.compareAtPrice && +match.compareAtPrice > +match.price) {
-        cmp.textContent = `$${fmt(match.compareAtPrice)}`;
+      const compareElement = querySelector('.pb-compare-price', productCard);
+      if (compareElement && matchingVariant.compareAtPrice && +matchingVariant.compareAtPrice > +matchingVariant.price) {
+        compareElement.textContent = `₹${formatPrice(matchingVariant.compareAtPrice)}`;
       }
       
       recalcTotals();
@@ -397,15 +503,15 @@ function bindEvents() {
     }
   });
 
-  dom.addBtn.addEventListener('click', addToCart);
+  dom.addToCartButton.addEventListener('click', addToCart);
 }
 
 function addToCart() {
-  if (!dom.proWrap) return;
+  if (!dom.productsWrapper) return;
   
-  const items = $$('.pb-product', dom.proWrap).map(el => {
-    const variantId = el.dataset.variant;
-    const qty = +$('.pb-quantity-selector', el)?.textContent?.replace('x', '') || 1;
+  const cartItems = querySelectorAll('.pb-product', dom.productsWrapper).map(productElement => {
+    const variantId = productElement.dataset.variant;
+    const quantity = +querySelector('.pb-quantity-selector', productElement)?.textContent?.replace('x', '') || 1;
     
     if (!variantId) return null;
     
@@ -415,32 +521,32 @@ function addToCart() {
       
     return {
       id: parseInt(numericId),
-      quantity: qty
+      quantity: quantity
     };
   }).filter(Boolean);
 
-  if (!items.length) {
+  if (!cartItems.length) {
     console.error('No valid variants selected');
     return;
   }
 
-  if (!dom.addBtn) return;
+  if (!dom.addToCartButton) return;
   
-  dom.addBtn.disabled = true;
-  dom.addBtn.textContent = 'Adding…';
+  dom.addToCartButton.disabled = true;
+  dom.addToCartButton.textContent = 'Adding…';
 
   fetch('/cart/add.js', {
-    method : 'POST',
+    method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body   : JSON.stringify({ items })
+    body: JSON.stringify({ items: cartItems })
   })
-    .then(r => r.ok ? r.json() : Promise.reject(r))
+    .then(response => response.ok ? response.json() : Promise.reject(response))
     .then(() => (window.location.href = '/cart'))
     .catch((error) => {
       console.error('Cart error:', error);
-      if (dom.addBtn) {
-        dom.addBtn.textContent = 'Error - Try Again';
-        dom.addBtn.disabled    = false;
+      if (dom.addToCartButton) {  
+        dom.addToCartButton.textContent = 'Error - Try Again';
+        dom.addToCartButton.disabled = false;
       }
     });
 }
