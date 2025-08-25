@@ -295,10 +295,6 @@ export default function Dashboard() {
               status="warning"
               tone="warning"
               onDismiss={() => {}}
-              // action={{
-              //   content: "Activate",
-              //   onAction: () => {},
-              // }}
             >
               <p>
                 Please activate the app by clicking 'Activate' button below and

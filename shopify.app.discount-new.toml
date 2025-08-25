@@ -1,10 +1,10 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "80c7816713770b2fc4ef0febdc7cc9b9"
-organization_id = "164642336"
 name = "discount-new"
 application_url = "https://example.com"
 embedded = true
+organization_id = "164642336"
 
 [build]
 automatically_update_urls_on_dev = true
